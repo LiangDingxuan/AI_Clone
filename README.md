@@ -2,9 +2,13 @@
 
 Data cleaning, sorting, and conversation sessionization pipeline designed to process Telegram chat history exports to train an AI chatbot clone mimicking the personality and conversation style of **Liang Dingxuan** (`@LiangDingxuan` / ID: `5711494385`).
 
+> [!TIP]
+> **Complete Operational Runbook Available**: Check [**`FULL_PIPELINE_GUIDE.md`**](FULL_PIPELINE_GUIDE.md) for the exhaustive guide covering fresh device GPU setup, updating `telegramChatHistory.json`, sorting, running all 3 approaches, dataset export, and fine-tuning.
+
 ---
 
 ## Table of Contents
+0. [**Complete Pipeline Runbook (`FULL_PIPELINE_GUIDE.md`)**](FULL_PIPELINE_GUIDE.md)
 1. [Overview & Results](#overview--results)
 2. [Quick Start (All-in-One Runner)](#quick-start-all-in-one-runner)
 3. [End-to-End Sorting & Sessionization Steps](#end-to-end-sorting--sessionization-steps)
@@ -16,6 +20,8 @@ Data cleaning, sorting, and conversation sessionization pipeline designed to pro
 5. [Data Models & Output Format](#data-models--output-format)
 6. [Running Individual Approaches](#running-individual-approaches)
 7. [Running Tests](#running-tests)
+8. [Context-Adaptive Personality Chatbot ("Dingxuan")](#context-adaptive-personality-chatbot-dingxuan)
+9. [Route B: Persona Model Fine-Tuning (QLoRA)](#route-b-persona-model-fine-tuning-qlora)
 
 ---
 
