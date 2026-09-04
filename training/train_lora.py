@@ -135,6 +135,11 @@ def parse_args() -> argparse.Namespace:
         help="Doppelganger Drift safeguard: stop if val_loss does not improve for N evaluations (default: 2)",
     )
     parser.add_argument(
+        "--abliterated",
+        action="store_true",
+        help="Use Heretic pre-abliterated model (huihui-ai/Qwen2.5-7B-Instruct-abliterated) to remove corporate refusal alignment",
+    )
+    parser.add_argument(
         "--merge-adapter",
         action="store_true",
         help="Merge LoRA adapter into base model weights and save full model checkpoint at end",
@@ -145,15 +150,18 @@ def parse_args() -> argparse.Namespace:
         help="Sanity-check data files, hyperparameter configuration, and chat formatting without GPU",
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.abliterated and args.model_name == "Qwen/Qwen2.5-7B-Instruct":
+        args.model_name = "huihui-ai/Qwen2.5-7B-Instruct-abliterated"
+    return args
 
 
 def detect_response_template(model_name: str) -> str:
     """Detects the completion delimiter template for the specified base model."""
     name_lower = model_name.lower()
-    if "llama-3" in name_lower or "llama3" in name_lower:
+    if "llama-3" in name_lower or "llama3" in name_lower or "daredevil" in name_lower:
         return "<|start_header_id|>assistant<|end_header_id|>\n\n"
-    # Default to ChatML / Qwen format
+    # Default to ChatML / Qwen format (including huihui-ai/Qwen2.5-7B-Instruct-abliterated)
     return "<|im_start|>assistant\n"
 
 
@@ -163,6 +171,11 @@ def run_dry_run_validation(args: argparse.Namespace) -> None:
     print(" DINGXUAN PERSONA QLORA - DRY RUN VALIDATION")
     print("=" * 70)
     print(f"Base Model Target       : {args.model_name}")
+    is_abliterated = args.abliterated or "abliterated" in args.model_name.lower()
+    if is_abliterated:
+        print("Abliteration Status     : ENABLED (Corporate refusal alignment removed via Heretic)")
+    else:
+        print("Abliteration Status     : Standard Alignment (Use --abliterated to remove refusal direction)")
     print(f"Response Template       : {repr(detect_response_template(args.model_name))}")
     print(f"Training Dataset Path   : {args.train_file}")
     print(f"Validation Dataset Path : {args.val_file}")

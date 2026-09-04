@@ -17,9 +17,10 @@ pip install -r training/requirements.txt
 
 echo ""
 echo "=== [3/3] Starting QLoRA Fine-Tuning ==="
-# Default: Qwen/Qwen2.5-7B-Instruct with style-boost (alpha=64) and Doppelganger safeguards
+# Default: Heretic abliterated base (huihui-ai/Qwen2.5-7B-Instruct-abliterated)
+# with style-boost (alpha=64) and Doppelganger safeguards
 python training/train_lora.py \
-    --model-name "Qwen/Qwen2.5-7B-Instruct" \
+    --abliterated \
     --train-file "data/train.jsonl" \
     --val-file "data/val.jsonl" \
     --output-dir "checkpoints/dingxuan_lora" \

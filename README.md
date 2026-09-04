@@ -40,7 +40,7 @@ Raw Telegram export files (`telegramChatHistory.json`) contain continuous multi-
 | **Step 4: Approach 3** | `private_group` | Gemini 2.5 Flash LLM / Fallback Chunking | **641** conversations | **2,277** turns | `approach_3_ai_llm/output/sessions_group.json` (10.64 MB) |
 | **Step 5: Profiler** | All Cleaned Sessions | Empirical Lexical Mining & Big-5 Trait Scoring | 1,740 episodes | 5,956 turns | `profiles_summary.json` (12 KB) |
 | **Step 6: SFT Exporter** | Training JSONL | Distractor Filter, Multi-Party Tags, Strict Alternation | **1,437** SFT episodes | **4,967** assistant turns | `data/train.jsonl` (7.8 MB)<br>`data/val.jsonl` (1.35 MB) |
-| **Step 7: QLoRA Trainer** | Open-Source LLMs | 4-bit NF4, Style-Boost (α=64), Early Stopping | Qwen-2.5 / LLaMA-3 | Full SFT Adapter | `checkpoints/dingxuan_lora/adapter` |
+| **Step 7: QLoRA Trainer** | Open-Source LLMs | Heretic Abliteration, 4-bit NF4, Style-Boost (α=64), Early Stopping | Qwen-2.5 (Abliterated) / LLaMA-3 | Full SFT Adapter | `checkpoints/dingxuan_lora/adapter` |
 
 ---
 
@@ -387,8 +387,8 @@ A complete, production-grade 4-bit QLoRA fine-tuning pipeline for open-source LL
                  │
                  ▼
 ┌─────────────────────────────────┐
-│ 2. training/train_lora.py       │  (4-bit QLoRA with BitsAndBytes, Style-Boost
-│    (Runs on GPU / Colab / Cloud)│   alpha calibration, completion loss, early stopping)
+│ 2. training/train_lora.py       │  (Heretic abliterated base model, 4-bit QLoRA
+│    (Runs on GPU / Colab / Cloud)│   with BitsAndBytes, Style-Boost α=64, early stopping)
 └────────────────┬────────────────┘
                  │
                  ▼
@@ -433,11 +433,15 @@ training\run_training.bat
 !git clone https://github.com/LiangDingxuan/AI_Clone.git
 %cd AI_Clone
 !pip install -r training/requirements.txt
-!python training/train_lora.py --style-boost --epochs 3 --merge-adapter
+!python training/train_lora.py --abliterated --style-boost --epochs 3 --merge-adapter
 ```
 
 ### 4. Advanced Hyperparameters & Safeguards
 
+- **Heretic Model Abliteration (`--abliterated`)**:
+  - Automatically targets **`huihui-ai/Qwen2.5-7B-Instruct-abliterated`** (abliterated using **Heretic** via Bayesian directional ablation).
+  - Removes corporate refusal directions (*"As an AI language model..."*) caused by corporate RLHF safety alignment, preventing the clone from breaking character during banter or colloquial discussions.
+  - Legitimate privacy defenses (IC numbers, home address, passwords) remain strictly protected and are handled in-character by `RefusalDeflectionLayer` in `chat_app.py` (*"whut why u asking that lol"*).
 - **LoRA Scaling Factor ($\alpha$) Calibration**:
   - `--style-boost`: Automatically sets $r=16, \alpha=64$ ($\alpha/r = 4.0$) and $lr=1.5\times 10^{-4}$ to amplify Dingxuan's colloquial quirks (`ah`, `sia`, `cuz`, `idk`, `yea`) without sounding robotic.
 - **Doppelganger Drift Safeguards**:
@@ -471,18 +475,18 @@ python -m unittest discover tests
 
 **Output**:
 ```
-Ran 30 tests in 1.35s
+Ran 31 tests in 1.40s
 OK
 ```
 
-### Test Coverage (30 Unit & Integration Tests):
+### Test Coverage (31 Unit & Integration Tests):
 - **Chat Sorter & Text Cleaning**: Plain text extraction, entity normalization, target user identification (`user5711494385`), 0-message chat pruning, and chat type categorization.
 - **Sessionizers**: Burst merging, conversation finalization, Approach 1 idle-gap splitting, Approach 3 dry-run fallback chunking, and dual-schema JSON loading resilience.
 - **Profiler & Linguistics**: Response length, lowercase ratio, punctuation frequencies (!, ?, ..., combo), Singlish particle extraction, and Big-5 academic trait estimation across DM, Group, and Supergroup contexts.
 - **System Prompt Synthesizer**: System prompt structure, mode-specific formatting constraints, in-character refusal deflection directives, few-shot QA pairing, and **Multi-Party Context Directives** in group chats.
 - **Inference Sandbox (`chat_app.py`)**: 5-turn sliding window buffer, SimulatedClient persona response generation, refusal deflection trigger matching, and LoRA adapter integration.
 - **Data Export & Distractor Filtering (`export_training_data.py`)**: Detection of bot commands, media placeholders, system event notices, multi-speaker bracketed tag formatting (`[Name]: text`), strictly alternating turn enforcement, and stratified 85/15 train/val splitting.
-- **QLoRA Fine-Tuning Safeguards (`train_lora.py`)**: Dry-run CPU validation, LoRA scaling factor calibration (`--style-boost` ratio 4.0), response template detection for Qwen vs. LLaMA-3, and early stopping callback configuration.
+- **QLoRA Fine-Tuning Safeguards (`train_lora.py`)**: Dry-run CPU validation, LoRA scaling factor calibration (`--style-boost` ratio 4.0), response template detection for Qwen vs. LLaMA-3, early stopping callback configuration, and Heretic abliterated base model flag resolution (`--abliterated`).
 
 
 

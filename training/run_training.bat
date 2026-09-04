@@ -18,7 +18,7 @@ pip install -r training\requirements.txt
 echo.
 echo === [3/3] Starting QLoRA Fine-Tuning ===
 python training\train_lora.py ^
-    --model-name "Qwen/Qwen2.5-7B-Instruct" ^
+    --abliterated ^
     --train-file "data/train.jsonl" ^
     --val-file "data/val.jsonl" ^
     --output-dir "checkpoints/dingxuan_lora" ^

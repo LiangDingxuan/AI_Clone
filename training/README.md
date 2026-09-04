@@ -49,19 +49,8 @@ This directory contains the complete training package for fine-tuning open-sourc
 # 2. Install dependencies
 !pip install -r training/requirements.txt
 
-# 3. Run QLoRA training
-!python training/train_lora.py \
-    --model-name "Qwen/Qwen2.5-7B-Instruct" \
-    --train-file "data/train.jsonl" \
-    --val-file "data/val.jsonl" \
-    --output-dir "checkpoints/dingxuan_lora" \
-    --style-boost \
-    --epochs 3 \
-    --batch-size 2 \
-    --grad-accum 8 \
-    --eval-steps 40 \
-    --early-stopping-patience 2 \
-    --merge-adapter
+# 3. Run QLoRA training on abliterated base
+!python training/train_lora.py --abliterated --style-boost --epochs 3 --merge-adapter
 
 # 4. Zip and download the checkpoint
 !zip -r dingxuan_adapter.zip checkpoints/dingxuan_lora/adapter
@@ -73,7 +62,13 @@ files.download("dingxuan_adapter.zip")
 
 ## 🧠 Key Features & Safeguards
 
-### 1. Style-Boost Scaling Factor ($\alpha$) Calibration
+### 1. Heretic Model Abliteration (`--abliterated`)
+Instruction models (`Qwen-2.5-7B-Instruct`) contain internal "refusal direction" vectors installed via corporate RLHF safety training. When discussing casual banter, gaming slang, or edgy topics with friends, base models can misfire and generate corporate refusal boilerplate (*"As an AI language model..."*), breaking character.
+- Passing `--abliterated` automatically uses **`huihui-ai/Qwen2.5-7B-Instruct-abliterated`** (abliterated using **Heretic** via Bayesian directional ablation).
+- This completely removes corporate refusal tendencies from the weights without retraining.
+- Any necessary refusals (e.g. asking for personal credentials or historical memory probing) are handled cleanly by our in-character [`RefusalDeflectionLayer`](../chat_app.py) (*"whut why u asking that lol"*).
+
+### 2. Style-Boost Scaling Factor ($\alpha$) Calibration
 By default, the training runner enables `--style-boost`, which configures:
 - **LoRA Rank**: $r = 16$
 - **LoRA Alpha**: $\alpha = 64$ (ratio $\alpha / r = 4.0$)
@@ -81,11 +76,11 @@ By default, the training runner enables `--style-boost`, which configures:
 
 Because persona cloning is style-heavy rather than knowledge-heavy, this ratio ensures Dingxuan's signature Singlish fillers (`ah`, `sia`, `cuz`, `idk`, `yea`, `wait`) and punchy brevity are captured effectively without sounding like a generic corporate assistant.
 
-### 2. "Doppelganger Drift" Safeguards (Style Overfitting Protection)
+### 3. "Doppelganger Drift" Safeguards (Style Overfitting Protection)
 - **Validation Completion Loss**: The validation set loss is computed **strictly on assistant tokens** using HuggingFace `trl`'s `DataCollatorForCompletionOnlyLM`. Loss is never computed on user/system prompts.
 - **Early Stopping**: The trainer evaluates validation loss every 40 steps. If the validation loss fails to improve for 2 consecutive checks while training loss plummets, training halts automatically and restores the best checkpoint (`load_best_model_at_end=True`).
 
-### 3. Multi-Party Context Directive
+### 4. Multi-Party Context Directive
 In group and supergroup chats, dialogue from third-party peers is formatted as `[Sender Name]: text`. The training samples incorporate an explicit system directive instructing Qwen to treat bracketed names as room background, preventing the model from confusing its identity with other participants.
 
 ---

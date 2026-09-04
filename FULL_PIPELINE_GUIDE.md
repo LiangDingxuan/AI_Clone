@@ -63,7 +63,7 @@ flowchart TD
     end
 
     subgraph Step5 ["Step 5: Persona QLoRA Fine-Tuning (training/train_lora.py)"]
-        TrainData --> Trainer["training/train_lora.py\n- Qwen-2.5-7B-Instruct / LLaMA-3-8B\n- 4-bit NF4 Quantization\n- Style-Boost Alpha Calibration (r=16, a=64)\n- Completion-Only Loss (Train & Val)\n- Early Stopping (Patience=2)"]
+        TrainData --> Trainer["training/train_lora.py\n- Qwen-2.5-7B-Instruct (--abliterated via Heretic)\n- 4-bit NF4 Quantization\n- Style-Boost Alpha Calibration (r=16, a=64)\n- Completion-Only Loss (Train & Val)\n- Early Stopping (Patience=2)"]
         Trainer --> Adapter["checkpoints/dingxuan_lora/adapter\n(or merged_model/)"]
     end
 
@@ -136,7 +136,7 @@ pip install -r training/requirements.txt
 ### 3. Verify Setup with Dry-Run
 Run a fast, zero-GPU dry-run to ensure the datasets, tokenizer configs, and hyperparameter calibrations load properly:
 ```bash
-python training/train_lora.py --dry-run --style-boost
+python training/train_lora.py --dry-run --style-boost --abliterated
 ```
 
 ### 4. Execute QLoRA Fine-Tuning
@@ -154,7 +154,7 @@ training\run_training.bat
 #### Custom GPU Command (with specific parameters):
 ```bash
 python training/train_lora.py \
-    --model-name "Qwen/Qwen2.5-7B-Instruct" \
+    --abliterated \
     --train-file "data/train.jsonl" \
     --val-file "data/val.jsonl" \
     --output-dir "checkpoints/dingxuan_lora" \
@@ -166,6 +166,7 @@ python training/train_lora.py \
     --early-stopping-patience 2 \
     --merge-adapter
 ```
+*(Note: `--abliterated` defaults to `huihui-ai/Qwen2.5-7B-Instruct-abliterated`, abliterated via Heretic to remove corporate RLHF refusal vectors. Pass `--model-name <repo>` to use an alternative base model).*
 
 ### 5. On Google Colab (Free T4 or Pro A100)
 1. Open [Google Colab](https://colab.research.google.com/) and set runtime to **T4 GPU** (`Runtime` -> `Change runtime type` -> `T4 GPU`).
@@ -174,7 +175,7 @@ python training/train_lora.py \
 !git clone https://github.com/LiangDingxuan/AI_Clone.git
 %cd AI_Clone
 !pip install -r training/requirements.txt
-!python training/train_lora.py --style-boost --epochs 3 --merge-adapter
+!python training/train_lora.py --abliterated --style-boost --epochs 3 --merge-adapter
 
 # Download your trained adapter
 !zip -r dingxuan_adapter.zip checkpoints/dingxuan_lora/adapter
@@ -329,7 +330,7 @@ Fine-tunes the base model in 4-bit precision with persona safeguards:
 pip install -r training/requirements.txt
 
 # 2. Run dry-run validation:
-python training/train_lora.py --dry-run --style-boost
+python training/train_lora.py --dry-run --style-boost --abliterated
 
 # 3. Launch training:
 # (Linux):
@@ -339,8 +340,10 @@ bash training/run_training.sh
 training\run_training.bat
 ```
 
-- **Key Safeguards**:
-  - `--style-boost`: Calibrates LoRA $r=16, \alpha=64$ ($\alpha/r = 4.0$) to amplify Singlish colloquialisms and brevity.
+- **Key Safeguards & Abliteration**:
+  - `--abliterated`: Uses **`huihui-ai/Qwen2.5-7B-Instruct-abliterated`** (abliterated using **Heretic** via Bayesian directional ablation). Instruction-tuned base models embed corporate refusal vectors ("*As an AI language model...*") from corporate RLHF safety training. Abliteration removes these refusal directions directly from the base weights at zero extra compute or VRAM cost, preventing the clone from breaking character during banter or edgy discussions.
+  - **In-Character Privacy Preservation**: Crucially, privacy protections (IC number, home address, passwords) are NOT lost—they are handled in-character by our Singlish `RefusalDeflectionLayer` in `chat_app.py` (*"whut why u asking that lol"*), ensuring your clone deflects invasive questions naturally without reverting to corporate AI apologies.
+  - `--style-boost`: Calibrates LoRA $r=16, \alpha=64$ ($\alpha/r = 4.0$) and learning rate $1.5\times 10^{-4}$ to amplify Singlish colloquialisms (`ah`, `sia`, `cuz`, `idk`, `yea`) and brevity.
   - **Completion-Only Loss**: Loss is calculated strictly on assistant turns for both train and validation sets.
   - **Early Stopping**: Evaluates every 40 steps, halting training if validation loss diverges for 2 checks (`early_stopping_patience=2`) and restoring the best checkpoint.
 - **Outputs**:
@@ -384,7 +387,7 @@ python -m unittest discover tests
 
 Expected output:
 ```
-Ran 30 tests in 1.35s
+Ran 31 tests in 1.40s
 OK
 ```
 
@@ -423,7 +426,7 @@ python index.py; python run_all.py --dry-run-llm; python profiler.py; python exp
 | **`profiler.py`** | Metrics, Big-5, & prompt profiler | `None` (outputs `profiles_summary.json`) | — |
 | **`synthesizer.py`** | Generates system prompts | `--context [dm\|group\|supergroup]` | `dm` |
 | **`export_training_data.py`** | Compiles SFT ChatML JSONL | `--output-dir`<br>`--val-ratio`<br>`--seed` | `data`<br>`0.15`<br>`42` |
-| **`training/train_lora.py`** | QLoRA GPU fine-tuning | `--model-name`<br>`--style-boost`<br>`--lora-r`<br>`--lora-alpha`<br>`--early-stopping-patience`<br>`--merge-adapter`<br>`--dry-run` | `Qwen/Qwen2.5-7B-Instruct`<br>`False`<br>`16`<br>`32`<br>`2`<br>`False`<br>`False` |
+| **`training/train_lora.py`** | QLoRA GPU fine-tuning | `--model-name`<br>`--abliterated`<br>`--style-boost`<br>`--lora-r`<br>`--lora-alpha`<br>`--early-stopping-patience`<br>`--merge-adapter`<br>`--dry-run` | `Qwen/Qwen2.5-7B-Instruct` *(or `huihui-ai/Qwen2.5-7B-Instruct-abliterated` if `--abliterated`)*<br>`False`<br>`False`<br>`16`<br>`32`<br>`2`<br>`False`<br>`False` |
 | **`chat_app.py`** | Interactive chat interface | `--provider [simulated\|hf\|openai\|anthropic]`<br>`--adapter <path>`<br>`--context [1\|2\|3]` | `simulated`<br>`None`<br>`personal_chat` |
 
 ---
@@ -455,3 +458,7 @@ python index.py; python run_all.py --dry-run-llm; python profiler.py; python exp
 ### 5. Pushing to GitHub Fails Due to Large Files
 - **Cause**: Git rejects files over 100 MB.
 - **Fix**: Model weights (`*.safetensors`, `checkpoints/`) are excluded in `.gitignore`. The datasets `data/train.jsonl` (7.8 MB) and `data/val.jsonl` (1.35 MB) are lightweight and will push without issue.
+
+### 6. Corporate Refusal Misfires ("As an AI language model..." or over-polite corporate tone)
+- **Cause**: Standard instruction-tuned models have corporate RLHF refusal vectors that trigger on casual banter, slang, or sensitive keywords.
+- **Fix**: Use `--abliterated` (enabled by default in `run_training.sh` and `run_training.bat`). This swaps the base model to `huihui-ai/Qwen2.5-7B-Instruct-abliterated` (abliterated using Heretic via Bayesian directional ablation). Corporate refusal boilerplate is eliminated, while legitimate privacy guardrails (IC numbers, passwords) are handled seamlessly by `RefusalDeflectionLayer` in Singlish.

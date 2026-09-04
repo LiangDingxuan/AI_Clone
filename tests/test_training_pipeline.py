@@ -8,6 +8,7 @@ Tests:
 """
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -184,6 +185,15 @@ class TestTrainingScriptSafeguards(unittest.TestCase):
 
             # Should complete without error
             run_dry_run_validation(mock_args)
+
+    def test_abliterated_flag(self):
+        """Test that --abliterated flag correctly switches to community abliterated model."""
+        with patch.object(sys, "argv", ["train_lora.py", "--abliterated"]):
+            args = parse_args()
+            self.assertTrue(args.abliterated)
+            self.assertEqual(args.model_name, "huihui-ai/Qwen2.5-7B-Instruct-abliterated")
+            tmpl = detect_response_template(args.model_name)
+            self.assertEqual(tmpl, "<|im_start|>assistant\n")
 
 
 class TestChatAppAdapterIntegration(unittest.TestCase):
