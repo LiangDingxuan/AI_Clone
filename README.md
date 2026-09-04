@@ -15,13 +15,14 @@ Data cleaning, sorting, and conversation sessionization pipeline designed to pro
    - [Step 1: Raw Chat Sorting & Filtering](#step-1-raw-chat-sorting--filtering)
    - [Step 2: Approach 1 — Rule-Based (1-on-1 Personal Chats)](#step-2-approach-1--rule-based-1-on-1-personal-chats)
    - [Step 3: Approach 2 — NLP Embeddings (Supergroups / Long-Form)](#step-3-approach-2--nlp-embeddings-supergroups--long-form)
-   - [Step 4: Approach 4 — AI/LLM Contextual Disentanglement (Group Chats)](#step-4-approach-3--aillm-contextual-disentanglement-group-chats)
+   - [Step 4: Approach 3 — AI/LLM Contextual Disentanglement (Group Chats)](#step-4-approach-3--aillm-contextual-disentanglement-group-chats)
 4. [Project Structure](#project-structure)
 5. [Data Models & Output Format](#data-models--output-format)
-6. [Running Individual Approaches](#running-individual-approaches)
-7. [Running Tests](#running-tests)
-8. [Context-Adaptive Personality Chatbot ("Dingxuan")](#context-adaptive-personality-chatbot-dingxuan)
-9. [Route B: Persona Model Fine-Tuning (QLoRA)](#route-b-persona-model-fine-tuning-qlora)
+6. [Conversational SFT Dataset Compilation](#conversational-sft-dataset-compilation)
+7. [Multi-Context Personality Profiler & Prompt Synthesizer](#multi-context-personality-profiler--prompt-synthesizer)
+8. [Interactive Chat Application (`chat_app.py`)](#interactive-chat-application-chat_apppy)
+9. [Persona Model Fine-Tuning (QLoRA)](#persona-model-fine-tuning-qlora)
+10. [Running Automated Tests](#running-automated-tests)
 
 ---
 
@@ -31,13 +32,15 @@ Raw Telegram export files (`telegramChatHistory.json`) contain continuous multi-
 
 ### Pipeline Dataset Summary
 
-| Stage / Approach | Target Data Type | Method | Conversations | Dingxuan Turns | Total Turns | Output File |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Step 1: Chat Sorter** | All Chats | Sort by Type & Prune 0-message chats | 71 active chats | 9,716 msgs | 146,591 msgs | `sorted_chats_by_type.json` (52 MB)<br>`chats_summary.json` (19 KB) |
-| **Step 2: Approach 1** | `personal_chat` (DMs) | Idle Gap (3h) + Burst Merge (90s) + Reply Graph | **909** | **3,478** | 7,621 | `approach_1_rule_based/output/sessions_personal_chat.json` (4.79 MB) |
-| **Step 3: Approach 2** | `private_supergroup` | SentenceTransformer + Cosine Similarity (<0.3) | **190** | **201** | 499 | `approach_2_nlp_embeddings/output/sessions_supergroup.json` (0.39 MB) |
-| **Step 4: Approach 3** | `private_group` | Gemini 2.5 Flash LLM / Fallback Chunking | **641** | **2,277** | 18,272 | `approach_3_ai_llm/output/sessions_group.json` (10.64 MB) |
-| **TOTAL** | | | **1,740** | **5,956** | **26,392** | **15.82 MB Clean Training Data** |
+| Stage / Component | Target Data Type | Method | Scope / Size | Dingxuan Turns | Output File / Artifact |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Step 1: Chat Sorter** | All Chats | Sort by Type & Prune 0-message chats | 71 active chats | 9,716 msgs | `sorted_chats_by_type.json` (52 MB)<br>`chats_summary.json` (19 KB) |
+| **Step 2: Approach 1** | `personal_chat` (DMs) | Idle Gap (3h) + Burst Merge (90s) + Reply Graph | **909** conversations | **3,478** turns | `approach_1_rule_based/output/sessions_personal_chat.json` (4.79 MB) |
+| **Step 3: Approach 2** | `private_supergroup` | SentenceTransformer + Cosine Similarity (<0.3) | **190** conversations | **201** turns | `approach_2_nlp_embeddings/output/sessions_supergroup.json` (0.39 MB) |
+| **Step 4: Approach 3** | `private_group` | Gemini 2.5 Flash LLM / Fallback Chunking | **641** conversations | **2,277** turns | `approach_3_ai_llm/output/sessions_group.json` (10.64 MB) |
+| **Step 5: Profiler** | All Cleaned Sessions | Empirical Lexical Mining & Big-5 Trait Scoring | 1,740 episodes | 5,956 turns | `profiles_summary.json` (12 KB) |
+| **Step 6: SFT Exporter** | Training JSONL | Distractor Filter, Multi-Party Tags, Strict Alternation | **1,437** SFT episodes | **4,967** assistant turns | `data/train.jsonl` (7.8 MB)<br>`data/val.jsonl` (1.35 MB) |
+| **Step 7: QLoRA Trainer** | Open-Source LLMs | 4-bit NF4, Style-Boost (α=64), Early Stopping | Qwen-2.5 / LLaMA-3 | Full SFT Adapter | `checkpoints/dingxuan_lora/adapter` |
 
 ---
 
@@ -160,11 +163,30 @@ python approach_3_ai_llm/run.py
 ```
 d:\LocalUser\AI_Clone\
 ├── README.md                                   # Documentation (this file)
+├── FULL_PIPELINE_GUIDE.md                      # Exhaustive end-to-end operational runbook
 ├── run_all.py                                  # Master pipeline runner
 ├── index.py                                    # CLI for chat sorting
 ├── chat_sorter.py                              # Core chat cleaner and sorter
 ├── chats_summary.json                          # Lightweight index of sorted chats (19 KB)
 ├── sorted_chats_by_type.json                   # Full cleaned & sorted Telegram export (52 MB)
+│
+├── profiler.py                                 # Multi-context linguistic & Big-5 personality profiler
+├── profiles_summary.json                       # Extracted personality metrics & few-shot exemplars
+├── synthesizer.py                              # Context-adaptive system prompt synthesizer
+├── export_training_data.py                     # Compiles session conversations into SFT JSONL format
+├── chat_app.py                                 # Interactive terminal chat sandbox (Simulated / HF / OpenAI)
+│
+├── data/                                       # SFT Conversational Training Datasets
+│   ├── train.jsonl                             # 1,223 training episodes (7.8 MB)
+│   ├── val.jsonl                               # 214 validation episodes (1.35 MB)
+│   └── training_data_summary.json              # Dataset statistics & token breakdown
+│
+├── training/                                   # Standalone GPU QLoRA Fine-Tuning Package
+│   ├── README.md                               # GPU / Google Colab / Cloud training instructions
+│   ├── requirements.txt                        # PyTorch, PEFT, TRL, BitsAndBytes dependencies
+│   ├── train_lora.py                           # 4-bit QLoRA trainer with Doppelganger Drift safeguards
+│   ├── run_training.sh                         # Turnkey bash training runner (Linux / Cloud GPU)
+│   └── run_training.bat                        # Turnkey batch training runner (Windows GPU)
 │
 ├── shared/                                     # Shared utilities
 │   ├── __init__.py
@@ -191,9 +213,11 @@ d:\LocalUser\AI_Clone\
 │   └── output/
 │       └── sessions_group.json                 # 641 conversations (10.64 MB)
 │
-└── tests/                                      # Automated unit tests
+└── tests/                                      # Automated unit tests (30 tests passing)
     ├── test_chat_sorter.py
-    └── test_sessionizers.py
+    ├── test_sessionizers.py
+    ├── test_personality_bot.py
+    └── test_training_pipeline.py
 ```
 
 ---
@@ -252,38 +276,35 @@ All three approaches export conversations adhering to the standardized `Conversa
 
 ---
 
-## Running Tests
+## Conversational SFT Dataset Compilation
 
-Run the test suite using Python's built-in `unittest` runner (zero external dependencies):
+**Script**: `export_training_data.py`  
+**Inputs**: Session files from Approach 1, 2, and 3  
+**Outputs**: `data/train.jsonl` (7.8 MB), `data/val.jsonl` (1.35 MB), `data/training_data_summary.json`
+
+Transforms the 1,740 sessionized conversations into standardized multi-turn ChatML/messages JSONL datasets for QLoRA fine-tuning.
+
+### What this step does:
+1. **Third-Party Distractor Filtering**: Strips bot commands (`/start`, `/help`), system events (join/leave, pinned messages), standalone URLs, and `<media omitted>` tags.
+2. **Multi-Party Context Formatting**: For group and supergroup chats, merges multiple other-user turns into a single user turn with bracketed sender tags: `[Edric]: let's meet\n[Jason]: what time?`.
+3. **Strict Turn Alternation**: Guarantees a strictly alternating `system` $\rightarrow$ `user` $\rightarrow$ `assistant` sequence. Automatically prunes leading assistant turns and trailing unreplied user turns so every episode concludes on an assistant (Dingxuan) turn.
+4. **Context-Adaptive System Prompt Injection**: Automatically prepends the exact synthesized system prompt generated by `synthesizer.py` (including the multi-party context directive).
+5. **Stratified 85/15 Split**: Performs an 85% train / 15% validation split stratified across personal, group, and supergroup episodes.
 
 ```bash
-python -m unittest discover tests
+python export_training_data.py --output-dir data/
 ```
 
-**Output**:
-```
-Ran 22 tests in 0.55s
-OK
-```
-Tests cover:
-- Plain text extraction and entity normalization
-- Target user identification and message attribution
-- Zero-message chat pruning and chat type categorization
-- Burst merging and conversation finalization
-- Approach 1 idle-gap splitting and quality filtering
-- Approach 3 dry-run fallback execution
-- Dual schema session loading (JSON resilience)
-- Linguistic metrics extraction & Big-5 personality calculation
-- Stylistic few-shot exemplar mining
-- System prompt synthesis across DM, Group, and Supergroup contexts
-- In-character Refusal Deflection Layer trigger matching and execution
-- 5-turn sliding window conversation buffer
+- **Dataset Breakdown**:
+  - `data/train.jsonl`: 1,223 episodes (4,270 Dingxuan assistant turns)
+  - `data/val.jsonl`: 214 episodes (697 Dingxuan assistant turns)
+  - **Total**: 1,437 formatted episodes, 4,967 assistant turns
 
 ---
 
-## Context-Adaptive Personality Chatbot ("Dingxuan")
+## Multi-Context Personality Profiler & Prompt Synthesizer
 
-A style-first, 3-layer architecture for simulating Dingxuan across 3 distinct social environments without vector databases (Zero-Dependency RAG):
+A style-first, 2-layer profiling architecture for simulating Dingxuan across 3 distinct social environments:
 
 ```
 ┌──────────────────────────────────────┐
@@ -295,12 +316,6 @@ A style-first, 3-layer architecture for simulating Dingxuan across 3 distinct so
 ┌──────────────────────────────────────┐
 │ 2. Context-Adaptive Prompt Generator │  (synthesizer.py)
 │    (Extracts Big-5 & Lexics per Mode)│
-└──────────────────┬───────────────────┘
-                   │
-                   ▼
-┌──────────────────────────────────────┐
-│ 3. Interactive Chat Interface        │  (chat_app.py)
-│    (Supports DM/Group/Super modes)   │
 └──────────────────────────────────────┘
 ```
 
@@ -310,7 +325,7 @@ Analyzes 1,740 conversational episodes and 5,956 of Dingxuan's turns across:
 - **Supergroups** (`approach_2_nlp_embeddings/output/sessions_supergroup.json`)
 - **Group Chats** (`approach_3_ai_llm/output/sessions_group.json`)
 
-Extracts quantitative metrics (turn length, lowercase ratio, punctuation frequency, Singlish particles like `ah`, `eh`, `cuz`, `idk`, `sia`), scores academic Big-5 personality traits (0.0 to 1.0), and mines 3–5 representative few-shot QA pairs.
+Extracts quantitative metrics (turn length, lowercase ratio, punctuation frequency, Singlish particles like `ah`, `eh`, `cuz`, `idk`, `sia`), scores academic Big-5 personality traits (0.0 to 1.0), and mines representative few-shot QA pairs.
 
 ```bash
 # Run standalone profiling and export JSON summary:
@@ -318,7 +333,7 @@ python profiler.py
 ```
 
 ### 2. Context-Adaptive Prompt Synthesizer (`synthesizer.py`)
-Dynamically constructs system prompts with absolute formatting constraints, Big-5 behavioral directives, lexicon guidelines, in-character refusal deflection instructions, and few-shot pairs.
+Dynamically constructs system prompts with absolute formatting constraints, Big-5 behavioral directives, lexicon guidelines, **Multi-Party Context Directives**, in-character refusal deflection instructions, and few-shot pairs.
 
 ```bash
 # Inspect generated prompt for a specific context:
@@ -327,16 +342,22 @@ python synthesizer.py --context group
 python synthesizer.py --context supergroup
 ```
 
-### 3. Interactive Chat Interface (`chat_app.py`)
+---
+
+## Interactive Chat Application (`chat_app.py`)
+
 Provides an interactive terminal conversation sandbox:
 - Prompts for chat context on start: `[1] Personal Chat (DM)`, `[2] Group Chat`, `[3] Supergroup Chat`.
 - Maintains a 5-turn sliding window buffer.
 - **Refusal Deflection Layer**: Intercepts biographical and historical memory queries with in-character deflections (e.g. *"idk tbh, can't rly remember rn lol"*, *"whut why u asking that lol"*).
-- Abstract LLM support: OpenAI-compatible endpoints, Anthropic Claude, HuggingFace, or offline **Simulated Provider** (zero API key / GPU needed).
+- Abstract LLM support: HuggingFace local pipeline / PEFT LoRA adapter, OpenAI-compatible endpoints, Anthropic Claude, or offline **Simulated Provider** (zero API key / GPU needed).
 
 ```bash
 # Run interactive chat (Simulated Provider):
 python chat_app.py
+
+# Run with trained LoRA clone:
+python chat_app.py --provider hf --adapter checkpoints/dingxuan_lora/adapter
 
 # Run with OpenAI API:
 set OPENAI_API_KEY=your_key
@@ -437,5 +458,31 @@ python chat_app.py --provider hf --adapter checkpoints/dingxuan_lora/adapter
 # Using merged standalone model:
 python chat_app.py --provider hf --model checkpoints/dingxuan_lora/merged_model
 ```
+
+---
+
+## Running Automated Tests
+
+Run the complete test suite using Python's built-in `unittest` runner (zero external dependencies required):
+
+```bash
+python -m unittest discover tests
+```
+
+**Output**:
+```
+Ran 30 tests in 1.35s
+OK
+```
+
+### Test Coverage (30 Unit & Integration Tests):
+- **Chat Sorter & Text Cleaning**: Plain text extraction, entity normalization, target user identification (`user5711494385`), 0-message chat pruning, and chat type categorization.
+- **Sessionizers**: Burst merging, conversation finalization, Approach 1 idle-gap splitting, Approach 3 dry-run fallback chunking, and dual-schema JSON loading resilience.
+- **Profiler & Linguistics**: Response length, lowercase ratio, punctuation frequencies (!, ?, ..., combo), Singlish particle extraction, and Big-5 academic trait estimation across DM, Group, and Supergroup contexts.
+- **System Prompt Synthesizer**: System prompt structure, mode-specific formatting constraints, in-character refusal deflection directives, few-shot QA pairing, and **Multi-Party Context Directives** in group chats.
+- **Inference Sandbox (`chat_app.py`)**: 5-turn sliding window buffer, SimulatedClient persona response generation, refusal deflection trigger matching, and LoRA adapter integration.
+- **Data Export & Distractor Filtering (`export_training_data.py`)**: Detection of bot commands, media placeholders, system event notices, multi-speaker bracketed tag formatting (`[Name]: text`), strictly alternating turn enforcement, and stratified 85/15 train/val splitting.
+- **QLoRA Fine-Tuning Safeguards (`train_lora.py`)**: Dry-run CPU validation, LoRA scaling factor calibration (`--style-boost` ratio 4.0), response template detection for Qwen vs. LLaMA-3, and early stopping callback configuration.
+
 
 
