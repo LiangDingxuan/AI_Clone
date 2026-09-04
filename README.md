@@ -256,7 +256,7 @@ python -m unittest discover tests
 
 **Output**:
 ```
-Ran 10 tests in 0.011s
+Ran 22 tests in 0.55s
 OK
 ```
 Tests cover:
@@ -266,3 +266,81 @@ Tests cover:
 - Burst merging and conversation finalization
 - Approach 1 idle-gap splitting and quality filtering
 - Approach 3 dry-run fallback execution
+- Dual schema session loading (JSON resilience)
+- Linguistic metrics extraction & Big-5 personality calculation
+- Stylistic few-shot exemplar mining
+- System prompt synthesis across DM, Group, and Supergroup contexts
+- In-character Refusal Deflection Layer trigger matching and execution
+- 5-turn sliding window conversation buffer
+
+---
+
+## Context-Adaptive Personality Chatbot ("Dingxuan")
+
+A style-first, 3-layer architecture for simulating Dingxuan across 3 distinct social environments without vector databases (Zero-Dependency RAG):
+
+```
+┌──────────────────────────────────────┐
+│ 1. Multi-Context Profiler & Analyzer │  (profiler.py)
+│    (Reads Personal, Group, & Super)  │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│ 2. Context-Adaptive Prompt Generator │  (synthesizer.py)
+│    (Extracts Big-5 & Lexics per Mode)│
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│ 3. Interactive Chat Interface        │  (chat_app.py)
+│    (Supports DM/Group/Super modes)   │
+└──────────────────────────────────────┘
+```
+
+### 1. Multi-Context Profiler (`profiler.py`)
+Analyzes 1,740 conversational episodes and 5,956 of Dingxuan's turns across:
+- **Personal DMs** (`approach_1_rule_based/output/sessions_personal_chat.json`)
+- **Supergroups** (`approach_2_nlp_embeddings/output/sessions_supergroup.json`)
+- **Group Chats** (`approach_3_ai_llm/output/sessions_group.json`)
+
+Extracts quantitative metrics (turn length, lowercase ratio, punctuation frequency, Singlish particles like `ah`, `eh`, `cuz`, `idk`, `sia`), scores academic Big-5 personality traits (0.0 to 1.0), and mines 3–5 representative few-shot QA pairs.
+
+```bash
+# Run standalone profiling and export JSON summary:
+python profiler.py
+```
+
+### 2. Context-Adaptive Prompt Synthesizer (`synthesizer.py`)
+Dynamically constructs system prompts with absolute formatting constraints, Big-5 behavioral directives, lexicon guidelines, in-character refusal deflection instructions, and few-shot pairs.
+
+```bash
+# Inspect generated prompt for a specific context:
+python synthesizer.py --context dm
+python synthesizer.py --context group
+python synthesizer.py --context supergroup
+```
+
+### 3. Interactive Chat Interface (`chat_app.py`)
+Provides an interactive terminal conversation sandbox:
+- Prompts for chat context on start: `[1] Personal Chat (DM)`, `[2] Group Chat`, `[3] Supergroup Chat`.
+- Maintains a 5-turn sliding window buffer.
+- **Refusal Deflection Layer**: Intercepts biographical and historical memory queries with in-character deflections (e.g. *"idk tbh, can't rly remember rn lol"*, *"whut why u asking that lol"*).
+- Abstract LLM support: OpenAI-compatible endpoints, Anthropic Claude, HuggingFace, or offline **Simulated Provider** (zero API key / GPU needed).
+
+```bash
+# Run interactive chat (Simulated Provider):
+python chat_app.py
+
+# Run with OpenAI API:
+set OPENAI_API_KEY=your_key
+python chat_app.py --provider openai --model gpt-4o-mini
+```
+
+**Commands inside chat**:
+- `/context [1|2|3]`: Switch chat context on the fly
+- `/stats`: View current linguistic & Big-5 personality metrics
+- `/prompt`: View the synthesized system prompt
+- `/clear`: Reset conversation history
+- `/exit`: Exit chat
+
