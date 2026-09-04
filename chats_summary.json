@@ -1,0 +1,693 @@
+{
+  "export_info": {
+    "target_user": "Dingxuan Liang",
+    "user_id": 5711494385,
+    "username": "@LiangDingxuan",
+    "total_chats": 71,
+    "total_messages": 146591,
+    "total_target_user_messages": 9716,
+    "chats_by_type_summary": {
+      "personal_chat": {
+        "chat_count": 43,
+        "total_messages": 13620,
+        "target_user_messages": 5433,
+        "other_messages": 8187
+      },
+      "private_group": {
+        "chat_count": 16,
+        "total_messages": 77858,
+        "target_user_messages": 3213,
+        "other_messages": 74645
+      },
+      "private_supergroup": {
+        "chat_count": 9,
+        "total_messages": 48204,
+        "target_user_messages": 892,
+        "other_messages": 47312
+      },
+      "saved_messages": {
+        "chat_count": 1,
+        "total_messages": 178,
+        "target_user_messages": 178,
+        "other_messages": 0
+      },
+      "private_channel": {
+        "chat_count": 2,
+        "total_messages": 6731,
+        "target_user_messages": 0,
+        "other_messages": 6731
+      }
+    }
+  },
+  "chats_by_type_index": {
+    "personal_chat": [
+      {
+        "id": 242405345,
+        "name": "Kelvin",
+        "is_left": false,
+        "total_messages": 1990,
+        "target_user_messages": 989,
+        "first_date": "2023-05-03T11:11:35",
+        "last_date": "2026-08-15T12:55:20"
+      },
+      {
+        "id": 876957851,
+        "name": "Isaac Tiew",
+        "is_left": false,
+        "total_messages": 2019,
+        "target_user_messages": 873,
+        "first_date": "2023-04-17T19:23:13",
+        "last_date": "2026-08-08T22:29:25"
+      },
+      {
+        "id": 5075739792,
+        "name": "Jake",
+        "is_left": false,
+        "total_messages": 1965,
+        "target_user_messages": 827,
+        "first_date": "2023-04-21T14:49:22",
+        "last_date": "2025-04-26T09:59:27"
+      },
+      {
+        "id": 5607016811,
+        "name": "Jason",
+        "is_left": false,
+        "total_messages": 1996,
+        "target_user_messages": 787,
+        "first_date": "2023-07-03T16:09:58",
+        "last_date": "2026-09-03T11:59:33"
+      },
+      {
+        "id": 5730607659,
+        "name": "Aaron Aaron",
+        "is_left": false,
+        "total_messages": 2014,
+        "target_user_messages": 583,
+        "first_date": "2024-06-12T01:22:39",
+        "last_date": "2026-08-12T17:16:23"
+      },
+      {
+        "id": 1823454037,
+        "name": "Edric",
+        "is_left": false,
+        "total_messages": 1730,
+        "target_user_messages": 538,
+        "first_date": "2023-04-14T19:31:00",
+        "last_date": "2026-05-05T19:44:44"
+      },
+      {
+        "id": 6159164724,
+        "name": "Carrott",
+        "is_left": false,
+        "total_messages": 464,
+        "target_user_messages": 225,
+        "first_date": "2023-11-27T09:12:18",
+        "last_date": "2026-08-14T18:41:55"
+      },
+      {
+        "id": 627531270,
+        "name": "Human Resource",
+        "is_left": false,
+        "total_messages": 360,
+        "target_user_messages": 155,
+        "first_date": "2025-02-06T22:40:57",
+        "last_date": "2026-05-05T23:27:23"
+      },
+      {
+        "id": 1104805639,
+        "name": "kai",
+        "is_left": false,
+        "total_messages": 304,
+        "target_user_messages": 135,
+        "first_date": "2025-10-23T16:32:46",
+        "last_date": "2026-04-01T20:04:53"
+      },
+      {
+        "id": 1580549881,
+        "name": "Yu Hong",
+        "is_left": false,
+        "total_messages": 137,
+        "target_user_messages": 65,
+        "first_date": "2025-04-11T20:58:37",
+        "last_date": "2026-01-26T11:21:27"
+      },
+      {
+        "id": 2111633603,
+        "name": "xinyu",
+        "is_left": false,
+        "total_messages": 154,
+        "target_user_messages": 63,
+        "first_date": "2024-07-23T18:51:35",
+        "last_date": "2026-08-03T11:50:25"
+      },
+      {
+        "id": 298239799,
+        "name": "Ben",
+        "is_left": false,
+        "total_messages": 55,
+        "target_user_messages": 27,
+        "first_date": "2023-05-19T09:37:05",
+        "last_date": "2026-03-02T15:37:19"
+      },
+      {
+        "id": 816293617,
+        "name": "Chat 816293617",
+        "is_left": false,
+        "total_messages": 39,
+        "target_user_messages": 18,
+        "first_date": "2023-05-15T09:32:21",
+        "last_date": "2025-03-08T21:01:47"
+      },
+      {
+        "id": 5272360890,
+        "name": "Marcus",
+        "is_left": false,
+        "total_messages": 19,
+        "target_user_messages": 16,
+        "first_date": "2023-06-08T20:34:56",
+        "last_date": "2024-10-04T16:05:54"
+      },
+      {
+        "id": 1474666828,
+        "name": "🐰🍀🐱",
+        "is_left": false,
+        "total_messages": 35,
+        "target_user_messages": 14,
+        "first_date": "2025-12-19T12:52:02",
+        "last_date": "2026-02-02T21:40:41"
+      },
+      {
+        "id": 1085167796,
+        "name": "Batrisyia",
+        "is_left": false,
+        "total_messages": 31,
+        "target_user_messages": 14,
+        "first_date": "2023-05-22T20:50:03",
+        "last_date": "2023-07-04T11:16:28"
+      },
+      {
+        "id": 8276186938,
+        "name": "Charlotte",
+        "is_left": false,
+        "total_messages": 24,
+        "target_user_messages": 13,
+        "first_date": "2026-08-09T16:29:15",
+        "last_date": "2026-08-19T16:43:52"
+      },
+      {
+        "id": 794294614,
+        "name": "xavier",
+        "is_left": false,
+        "total_messages": 44,
+        "target_user_messages": 11,
+        "first_date": "2026-01-11T17:44:00",
+        "last_date": "2026-02-08T16:31:46"
+      },
+      {
+        "id": 5013326478,
+        "name": "An",
+        "is_left": false,
+        "total_messages": 27,
+        "target_user_messages": 8,
+        "first_date": "2023-06-01T10:02:37",
+        "last_date": "2024-06-10T17:05:42"
+      },
+      {
+        "id": 6191802950,
+        "name": "ivory",
+        "is_left": false,
+        "total_messages": 27,
+        "target_user_messages": 7,
+        "first_date": "2025-11-12T22:40:57",
+        "last_date": "2026-01-14T22:56:18"
+      },
+      {
+        "id": 1975465394,
+        "name": "julian",
+        "is_left": false,
+        "total_messages": 27,
+        "target_user_messages": 7,
+        "first_date": "2024-11-06T14:09:38",
+        "last_date": "2025-11-14T09:12:21"
+      },
+      {
+        "id": 1919420091,
+        "name": "jing mei",
+        "is_left": false,
+        "total_messages": 18,
+        "target_user_messages": 7,
+        "first_date": "2023-06-06T21:04:31",
+        "last_date": "2023-06-24T23:12:27"
+      },
+      {
+        "id": 6267261977,
+        "name": "Jeyrick",
+        "is_left": false,
+        "total_messages": 17,
+        "target_user_messages": 7,
+        "first_date": "2023-04-14T15:01:12",
+        "last_date": "2023-04-14T16:22:32"
+      },
+      {
+        "id": 1070128162,
+        "name": "Zhe Kai (CSS) 83238208",
+        "is_left": false,
+        "total_messages": 12,
+        "target_user_messages": 7,
+        "first_date": "2025-04-01T09:45:46",
+        "last_date": "2025-09-09T08:17:23"
+      },
+      {
+        "id": 5982764103,
+        "name": "daniel",
+        "is_left": false,
+        "total_messages": 12,
+        "target_user_messages": 7,
+        "first_date": "2024-07-11T08:20:19",
+        "last_date": "2025-02-21T16:13:27"
+      },
+      {
+        "id": 309904461,
+        "name": "ᴊᴏᴇʏ",
+        "is_left": false,
+        "total_messages": 15,
+        "target_user_messages": 6,
+        "first_date": "2025-10-23T16:33:42",
+        "last_date": "2026-02-14T21:41:58"
+      },
+      {
+        "id": 1324644060,
+        "name": "yx",
+        "is_left": false,
+        "total_messages": 15,
+        "target_user_messages": 5,
+        "first_date": "2023-11-03T13:03:44",
+        "last_date": "2023-11-23T21:35:17"
+      },
+      {
+        "id": 1918249065,
+        "name": "Chat 1918249065",
+        "is_left": false,
+        "total_messages": 9,
+        "target_user_messages": 4,
+        "first_date": "2023-01-19T21:39:19",
+        "last_date": "2023-01-20T12:09:05"
+      },
+      {
+        "id": 5899974659,
+        "name": "mingqi",
+        "is_left": false,
+        "total_messages": 6,
+        "target_user_messages": 2,
+        "first_date": "2024-11-26T15:04:02",
+        "last_date": "2026-05-08T20:55:37"
+      },
+      {
+        "id": 1054239388,
+        "name": "JX",
+        "is_left": false,
+        "total_messages": 6,
+        "target_user_messages": 2,
+        "first_date": "2023-04-12T19:29:58",
+        "last_date": "2023-04-12T20:38:11"
+      },
+      {
+        "id": 6015579676,
+        "name": "Ghim Yong",
+        "is_left": false,
+        "total_messages": 5,
+        "target_user_messages": 2,
+        "first_date": "2023-04-11T21:16:32",
+        "last_date": "2023-04-12T08:29:40"
+      },
+      {
+        "id": 6230961261,
+        "name": "Meng",
+        "is_left": false,
+        "total_messages": 4,
+        "target_user_messages": 2,
+        "first_date": "2023-02-11T21:25:20",
+        "last_date": "2023-02-11T22:10:57"
+      },
+      {
+        "id": 1626478715,
+        "name": "Tim",
+        "is_left": false,
+        "total_messages": 5,
+        "target_user_messages": 1,
+        "first_date": "2023-01-19T21:04:57",
+        "last_date": "2023-01-19T21:09:01"
+      },
+      {
+        "id": 1041927206,
+        "name": "qien️🍓",
+        "is_left": false,
+        "total_messages": 3,
+        "target_user_messages": 1,
+        "first_date": "2025-12-04T22:54:51",
+        "last_date": "2025-12-04T22:57:20"
+      },
+      {
+        "id": 5812854083,
+        "name": "Clive",
+        "is_left": false,
+        "total_messages": 1,
+        "target_user_messages": 1,
+        "first_date": "2025-04-01T09:48:26",
+        "last_date": "2025-04-01T09:48:26"
+      },
+      {
+        "id": 1573485944,
+        "name": "qi",
+        "is_left": false,
+        "total_messages": 1,
+        "target_user_messages": 1,
+        "first_date": "2025-02-17T09:12:37",
+        "last_date": "2025-02-17T09:12:37"
+      },
+      {
+        "id": 6089037522,
+        "name": "Chat 6089037522",
+        "is_left": false,
+        "total_messages": 1,
+        "target_user_messages": 1,
+        "first_date": "2023-06-17T20:27:44",
+        "last_date": "2023-06-17T20:27:44"
+      },
+      {
+        "id": 965382900,
+        "name": "may",
+        "is_left": false,
+        "total_messages": 1,
+        "target_user_messages": 1,
+        "first_date": "2023-05-22T18:06:50",
+        "last_date": "2023-05-22T18:06:50"
+      },
+      {
+        "id": 5823523284,
+        "name": "Jayden",
+        "is_left": false,
+        "total_messages": 1,
+        "target_user_messages": 1,
+        "first_date": "2023-03-13T15:27:17",
+        "last_date": "2023-03-13T15:27:17"
+      },
+      {
+        "id": 891305056,
+        "name": "Andy",
+        "is_left": false,
+        "total_messages": 13,
+        "target_user_messages": 0,
+        "first_date": "2023-04-18T04:55:25",
+        "last_date": "2026-07-21T12:51:29"
+      },
+      {
+        "id": 777000,
+        "name": "Telegram",
+        "is_left": false,
+        "total_messages": 12,
+        "target_user_messages": 0,
+        "first_date": "2023-01-20T03:05:55",
+        "last_date": "2026-09-03T11:05:26"
+      },
+      {
+        "id": 1995200081,
+        "name": "hongyii",
+        "is_left": false,
+        "total_messages": 1,
+        "target_user_messages": 0,
+        "first_date": "2025-10-25T21:52:08",
+        "last_date": "2025-10-25T21:52:08"
+      },
+      {
+        "id": 585044945,
+        "name": "K",
+        "is_left": false,
+        "total_messages": 1,
+        "target_user_messages": 0,
+        "first_date": "2025-02-04T20:29:47",
+        "last_date": "2025-02-04T20:29:47"
+      }
+    ],
+    "private_group": [
+      {
+        "id": 881613748,
+        "name": "Gacha Addiction Support Club",
+        "is_left": false,
+        "total_messages": 49061,
+        "target_user_messages": 1356,
+        "first_date": "2023-06-02T14:48:23",
+        "last_date": "2024-09-15T00:13:43"
+      },
+      {
+        "id": 4162694894,
+        "name": "MAD Assignment / DSA class",
+        "is_left": false,
+        "total_messages": 1876,
+        "target_user_messages": 489,
+        "first_date": "2024-04-19T15:41:05",
+        "last_date": "2025-01-07T14:27:36"
+      },
+      {
+        "id": 967731415,
+        "name": "DSF group",
+        "is_left": false,
+        "total_messages": 4990,
+        "target_user_messages": 437,
+        "first_date": "2023-04-27T17:49:01",
+        "last_date": "2024-08-15T13:07:14"
+      },
+      {
+        "id": 4270113547,
+        "name": "BED assignment",
+        "is_left": false,
+        "total_messages": 1153,
+        "target_user_messages": 206,
+        "first_date": "2024-05-09T13:05:07",
+        "last_date": "2024-08-01T08:43:30"
+      },
+      {
+        "id": 4731965540,
+        "name": "DUX 🎨 - Asg2",
+        "is_left": false,
+        "total_messages": 945,
+        "target_user_messages": 180,
+        "first_date": "2025-01-13T17:47:16",
+        "last_date": "2025-02-14T20:53:29"
+      },
+      {
+        "id": 4662769089,
+        "name": "SDP Assignment",
+        "is_left": false,
+        "total_messages": 535,
+        "target_user_messages": 129,
+        "first_date": "2025-01-22T13:00:39",
+        "last_date": "2025-02-18T17:50:33"
+      },
+      {
+        "id": 4822062734,
+        "name": "ben10",
+        "is_left": false,
+        "total_messages": 5205,
+        "target_user_messages": 122,
+        "first_date": "2026-02-23T10:48:01",
+        "last_date": "2026-09-02T18:32:44"
+      },
+      {
+        "id": 4555787141,
+        "name": "Full sacc development",
+        "is_left": false,
+        "total_messages": 10355,
+        "target_user_messages": 112,
+        "first_date": "2024-10-16T16:17:35",
+        "last_date": "2026-03-11T17:30:20"
+      },
+      {
+        "id": 4921118629,
+        "name": "CDB",
+        "is_left": false,
+        "total_messages": 458,
+        "target_user_messages": 104,
+        "first_date": "2025-11-05T15:09:15",
+        "last_date": "2026-02-12T15:52:46"
+      },
+      {
+        "id": 5021909554,
+        "name": "PROID project",
+        "is_left": false,
+        "total_messages": 515,
+        "target_user_messages": 27,
+        "first_date": "2025-10-31T14:58:15",
+        "last_date": "2026-02-06T19:49:50"
+      },
+      {
+        "id": 940321953,
+        "name": "Comms - Tech & Edu",
+        "is_left": false,
+        "total_messages": 391,
+        "target_user_messages": 14,
+        "first_date": "2023-04-21T14:51:03",
+        "last_date": "2023-07-14T13:15:13"
+      },
+      {
+        "id": 4236882185,
+        "name": "wisp",
+        "is_left": false,
+        "total_messages": 671,
+        "target_user_messages": 12,
+        "first_date": "2024-06-03T17:23:41",
+        "last_date": "2024-07-26T17:50:53"
+      },
+      {
+        "id": 4720549272,
+        "name": "Infosys internship",
+        "is_left": false,
+        "total_messages": 94,
+        "target_user_messages": 12,
+        "first_date": "2025-04-10T09:52:02",
+        "last_date": "2025-08-18T14:10:35"
+      },
+      {
+        "id": 4274916747,
+        "name": "SWAD",
+        "is_left": false,
+        "total_messages": 462,
+        "target_user_messages": 7,
+        "first_date": "2024-08-09T19:54:15",
+        "last_date": "2024-10-30T07:16:37"
+      },
+      {
+        "id": 4093907015,
+        "name": "IT03",
+        "is_left": false,
+        "total_messages": 800,
+        "target_user_messages": 3,
+        "first_date": "2023-12-15T15:23:36",
+        "last_date": "2026-03-03T21:40:26"
+      },
+      {
+        "id": 4668760749,
+        "name": "Jason Support Group",
+        "is_left": false,
+        "total_messages": 347,
+        "target_user_messages": 3,
+        "first_date": "2024-12-09T18:16:05",
+        "last_date": "2025-04-13T20:39:59"
+      }
+    ],
+    "private_supergroup": [
+      {
+        "id": 2557170388,
+        "name": "Mans Schutzstaffel",
+        "is_left": false,
+        "total_messages": 42708,
+        "target_user_messages": 820,
+        "first_date": "2024-05-21T15:34:39",
+        "last_date": "2026-09-02T19:20:15"
+      },
+      {
+        "id": 2868059728,
+        "name": "Network Grp",
+        "is_left": false,
+        "total_messages": 164,
+        "target_user_messages": 26,
+        "first_date": "2025-10-22T10:32:59",
+        "last_date": "2026-01-12T09:27:18"
+      },
+      {
+        "id": 1920091016,
+        "name": "IT03 informal / Spam",
+        "is_left": false,
+        "total_messages": 1641,
+        "target_user_messages": 19,
+        "first_date": "2023-04-17T19:33:27",
+        "last_date": "2026-02-13T16:29:46"
+      },
+      {
+        "id": 2620334386,
+        "name": "12 disciples of Ben",
+        "is_left": false,
+        "total_messages": 1205,
+        "target_user_messages": 15,
+        "first_date": "2024-12-09T23:43:52",
+        "last_date": "2025-08-09T11:15:36"
+      },
+      {
+        "id": 2090862150,
+        "name": "IT03 -Materials Grp",
+        "is_left": false,
+        "total_messages": 131,
+        "target_user_messages": 10,
+        "first_date": "2024-04-26T14:07:12",
+        "last_date": "2024-06-27T18:46:24"
+      },
+      {
+        "id": 2122702667,
+        "name": "Overflow AY26/27",
+        "is_left": false,
+        "total_messages": 744,
+        "target_user_messages": 1,
+        "first_date": "2024-04-30T09:19:38",
+        "last_date": "2026-09-01T23:31:36"
+      },
+      {
+        "id": 1715396109,
+        "name": "2023 IT03 - Mr Low Kheng Hian",
+        "is_left": false,
+        "total_messages": 645,
+        "target_user_messages": 1,
+        "first_date": "2023-04-10T17:29:52",
+        "last_date": "2026-04-01T10:04:26"
+      },
+      {
+        "id": 1737045108,
+        "name": "NPTKD 2024",
+        "is_left": false,
+        "total_messages": 921,
+        "target_user_messages": 0,
+        "first_date": "2022-05-04T19:46:13",
+        "last_date": "2025-05-25T18:00:22"
+      },
+      {
+        "id": 1982234318,
+        "name": "Overflow 2023 batch",
+        "is_left": false,
+        "total_messages": 45,
+        "target_user_messages": 0,
+        "first_date": "2023-10-03T20:00:46",
+        "last_date": "2024-04-30T12:27:59"
+      }
+    ],
+    "saved_messages": [
+      {
+        "id": 5711494385,
+        "name": "Saved Messages",
+        "is_left": false,
+        "total_messages": 178,
+        "target_user_messages": 178,
+        "first_date": "2024-04-01T16:13:50",
+        "last_date": "2026-09-03T10:20:47"
+      }
+    ],
+    "private_channel": [
+      {
+        "id": 1151024971,
+        "name": "SG Part Time Jobs",
+        "is_left": false,
+        "total_messages": 6602,
+        "target_user_messages": 0,
+        "first_date": "2022-03-20T08:38:14",
+        "last_date": "2026-09-03T12:01:38"
+      },
+      {
+        "id": 1220733703,
+        "name": "NP SEN support for students",
+        "is_left": false,
+        "total_messages": 129,
+        "target_user_messages": 0,
+        "first_date": "2021-02-10T16:17:58",
+        "last_date": "2026-07-24T09:19:28"
+      }
+    ]
+  }
+}
