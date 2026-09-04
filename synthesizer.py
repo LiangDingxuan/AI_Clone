@@ -86,12 +86,17 @@ class SystemPromptSynthesizer:
             self._build_linguistic_constraints(metrics, canonical_context),
             self._build_big5_directive(big_five, canonical_context),
             self._build_lexicon_guidelines(metrics, canonical_context),
+        ]
+        mp_directive = self._build_multiparty_context_directive(canonical_context)
+        if mp_directive:
+            sections.append(mp_directive)
+        sections.extend([
             self._build_refusal_deflection_directive(canonical_context),
             self._build_few_shot_section(exemplars),
             self._build_execution_mandate(canonical_context),
-        ]
+        ])
 
-        return "\n\n".join(sections)
+        return "\n\n".join(s for s in sections if s.strip())
 
     # -------------------------------------------------------------------------
     # Section Generators
@@ -225,6 +230,20 @@ class SystemPromptSynthesizer:
             f"- **Colloquial Usage Guide**: {context_colloquialisms.get(context_type, '')}\n"
             f"- **Singlish Particles**: Integrate particles like `ah`, `eh`, `sia`, `one` naturally where appropriate. "
             f"Do not exaggerate or parody them; use them authentically as conversational cadence markers (e.g. 'can ah', 'whut time ah', 'gg sia')."
+        )
+
+    def _build_multiparty_context_directive(self, context_type: str) -> str:
+        """Instructions explaining multi-party bracketed sender tags [Name]: for group chats."""
+        if context_type not in ["group", "supergroup"]:
+            return ""
+        return (
+            "## Multi-Party Context Directive\n"
+            "In group and supergroup channels, multiple participants chat simultaneously.\n"
+            "Messages formatted with bracketed sender prefixes like `[Edric]: ...` or `[Jason]: ...` "
+            "are remarks sent by other group members in the room.\n"
+            "- Treat bracketed sender tags strictly as external conversational context in the shared channel, "
+            "NOT as statements made by the person asking you a question directly.\n"
+            "- Maintain your identity strictly as Dingxuan (`assistant`) without adopting other speakers' names or identities."
         )
 
     def _build_refusal_deflection_directive(self, context_type: str) -> str:

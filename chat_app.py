@@ -342,19 +342,47 @@ class AnthropicClient(BaseLLMClient):
 
 
 class HuggingFaceClient(BaseLLMClient):
-    """Client for local open-source weights using transformers pipeline."""
+    """Client for local open-source weights using transformers pipeline or PEFT LoRA adapter."""
 
-    def __init__(self, model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"):
+    def __init__(
+        self,
+        model_name: Optional[str] = None,
+        adapter_path: Optional[str] = None,
+    ):
+        base_model = model_name or "Qwen/Qwen2.5-7B-Instruct"
         try:
-            from transformers import pipeline
-            self.pipeline = pipeline(
-                "text-generation",
-                model=model_name,
-                device_map="auto",
-            )
-            logger.info("Loaded local HuggingFace model: %s", model_name)
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            dtype = torch.bfloat16 if (device == "cuda" and torch.cuda.is_bf16_supported()) else (torch.float16 if device == "cuda" else torch.float32)
+            logger.info("Initializing HuggingFace pipeline on %s (dtype=%s)...", device, dtype)
+
+            if adapter_path:
+                logger.info("Loading base model: %s with LoRA adapter: %s", base_model, adapter_path)
+                tokenizer_src = adapter_path if Path(adapter_path).is_dir() else base_model
+                tokenizer = AutoTokenizer.from_pretrained(tokenizer_src, trust_remote_code=True)
+                model = AutoModelForCausalLM.from_pretrained(
+                    base_model,
+                    torch_dtype=dtype,
+                    device_map="auto" if device == "cuda" else None,
+                    trust_remote_code=True,
+                )
+                from peft import PeftModel
+                model = PeftModel.from_pretrained(model, adapter_path)
+                model = model.merge_and_unload()
+                self.pipeline = pipeline("text-generation", model=model, tokenizer=tokenizer)
+            else:
+                self.pipeline = pipeline(
+                    "text-generation",
+                    model=base_model,
+                    device_map="auto" if device == "cuda" else None,
+                    torch_dtype=dtype,
+                    trust_remote_code=True,
+                )
+            logger.info("Successfully loaded local HuggingFace model.")
         except Exception as e:
-            raise RuntimeError(f"Failed to load HuggingFace pipeline for {model_name}: {e}") from e
+            raise RuntimeError(f"Failed to load HuggingFace model '{base_model}' (adapter: {adapter_path}): {e}") from e
 
     def generate_response(
         self,
@@ -376,12 +404,17 @@ class HuggingFaceClient(BaseLLMClient):
 def create_llm_client(
     provider: Optional[str] = None,
     model: Optional[str] = None,
+    adapter: Optional[str] = None,
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
     context_type: str = "personal_chat",
 ) -> BaseLLMClient:
     """Factory to initialize the appropriate LLM client with automatic fallback."""
     provider_clean = (provider or "").strip().lower()
+
+    if adapter or provider_clean in ["hf", "huggingface", "llama", "qwen", "lora"]:
+        logger.info("Initializing HuggingFaceClient...")
+        return HuggingFaceClient(model_name=model, adapter_path=adapter)
 
     if provider_clean in ["openai", "chatgpt"] or (not provider_clean and os.environ.get("OPENAI_API_KEY")):
         logger.info("Initializing OpenAIClient...")
@@ -390,10 +423,6 @@ def create_llm_client(
     if provider_clean in ["anthropic", "claude"] or (not provider_clean and os.environ.get("ANTHROPIC_API_KEY")):
         logger.info("Initializing AnthropicClient...")
         return AnthropicClient(api_key=api_key, model=model)
-
-    if provider_clean in ["hf", "huggingface", "llama"]:
-        logger.info("Initializing HuggingFaceClient...")
-        return HuggingFaceClient(model_name=model or "meta-llama/Meta-Llama-3-8B-Instruct")
 
     logger.info("No external LLM key provided. Defaulting to high-fidelity SimulatedClient.")
     return SimulatedClient(context_type=context_type)
@@ -620,6 +649,12 @@ def main():
         help="Specific model name (e.g. gpt-4o-mini, claude-3-5-sonnet-20241022, meta-llama/Meta-Llama-3-8B-Instruct)",
     )
     parser.add_argument(
+        "--adapter",
+        "-a",
+        default=None,
+        help="Path to trained LoRA adapter checkpoint directory (e.g. checkpoints/dingxuan_lora/adapter)",
+    )
+    parser.add_argument(
         "--api-key",
         default=None,
         help="API key for selected provider",
@@ -637,6 +672,7 @@ def main():
     llm_client = create_llm_client(
         provider=args.provider,
         model=args.model,
+        adapter=args.adapter,
         api_key=args.api_key,
         base_url=args.base_url,
         context_type=ctx,

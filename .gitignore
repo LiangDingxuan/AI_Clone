@@ -1,3 +1,21 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
+# Training checkpoints and model weights (large binaries)
+checkpoints/
+*.safetensors
+*.bin
+*.pt
+*.pth
+wandb/
+runs/
+
+# Environments & IDEs
+.venv/
+venv/
+env/
+.idea/
+.vscode/
+*.swp

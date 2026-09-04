@@ -344,3 +344,92 @@ python chat_app.py --provider openai --model gpt-4o-mini
 - `/clear`: Reset conversation history
 - `/exit`: Exit chat
 
+---
+
+## Route B: Persona Model Fine-Tuning (QLoRA)
+
+A complete, production-grade 4-bit QLoRA fine-tuning pipeline for open-source LLMs (**Qwen-2.5-7B-Instruct** or **Meta-Llama-3-8B-Instruct**) trained directly on Liang Dingxuan's 1,437 formatted conversational episodes (4,967 assistant turns).
+
+### 1. Training Architecture & Workflow
+
+```
+┌─────────────────────────────────┐
+│ 1. export_training_data.py      │  (Filters noise, formats multi-party tags [Name]:,
+│    (Creates data/*.jsonl)       │   injects context system prompts, 85/15 split)
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│ 2. training/train_lora.py       │  (4-bit QLoRA with BitsAndBytes, Style-Boost
+│    (Runs on GPU / Colab / Cloud)│   alpha calibration, completion loss, early stopping)
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│ 3. chat_app.py --adapter <path> │  (Interactive inference with trained clone)
+└─────────────────────────────────┘
+```
+
+### 2. Export Training Dataset (CPU / Local)
+
+Transform the sessionized Telegram history into standardized ChatML/messages JSONL datasets:
+
+```bash
+python export_training_data.py --output-dir data/
+```
+
+- **Output files**:
+  - `data/train.jsonl` (1,223 episodes, 4,270 assistant turns — 7.8 MB)
+  - `data/val.jsonl` (214 episodes, 697 assistant turns — 1.35 MB)
+  - `data/training_data_summary.json` (metadata & context breakdown)
+
+### 3. Training on Another Device with a GPU
+
+After pushing to GitHub, clone the repository on any device with an NVIDIA GPU ($\ge 8\text{ GB}$ VRAM, or Google Colab T4/A100):
+
+#### Linux / Cloud Workstation (RunPod, Lambda, Vast.ai):
+```bash
+git clone https://github.com/LiangDingxuan/AI_Clone.git
+cd AI_Clone
+bash training/run_training.sh
+```
+
+#### Windows Workstation with GPU:
+```cmd
+git clone https://github.com/LiangDingxuan/AI_Clone.git
+cd AI_Clone
+training\run_training.bat
+```
+
+#### Google Colab:
+```python
+!git clone https://github.com/LiangDingxuan/AI_Clone.git
+%cd AI_Clone
+!pip install -r training/requirements.txt
+!python training/train_lora.py --style-boost --epochs 3 --merge-adapter
+```
+
+### 4. Advanced Hyperparameters & Safeguards
+
+- **LoRA Scaling Factor ($\alpha$) Calibration**:
+  - `--style-boost`: Automatically sets $r=16, \alpha=64$ ($\alpha/r = 4.0$) and $lr=1.5\times 10^{-4}$ to amplify Dingxuan's colloquial quirks (`ah`, `sia`, `cuz`, `idk`, `yea`) without sounding robotic.
+- **Doppelganger Drift Safeguards**:
+  - **Completion-Only Validation Loss**: Loss is computed strictly on assistant turns for both train and validation splits (user questions are never penalized).
+  - **Early Stopping**: Halts training if validation loss does not improve for 2 evaluations (`--early-stopping-patience 2`), restoring the best checkpoint to prevent style overfitting.
+- **Third-Party Distractor Protection**:
+  - In group chats, other users are formatted as `[Sender Name]: text`.
+  - The system prompt includes an explicit **Multi-Party Context Directive** instructing the model to treat bracketed names as room background context, not statements made by the direct prompter.
+
+### 5. Chatting with Your Trained Clone
+
+Launch the interactive chat interface with your trained LoRA adapter:
+
+```bash
+# Using LoRA adapter checkpoint:
+python chat_app.py --provider hf --adapter checkpoints/dingxuan_lora/adapter
+
+# Using merged standalone model:
+python chat_app.py --provider hf --model checkpoints/dingxuan_lora/merged_model
+```
+
+

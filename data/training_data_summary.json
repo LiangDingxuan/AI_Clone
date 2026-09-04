@@ -1,0 +1,27 @@
+{
+  "total_raw_sessions_inspected": 1740,
+  "total_formatted_episodes": 1437,
+  "train_episodes": 1223,
+  "val_episodes": 214,
+  "val_ratio": 0.15,
+  "total_assistant_turns_modeled": 4967,
+  "context_breakdown": {
+    "personal_chat": {
+      "total_valid_episodes": 780,
+      "train_episodes": 663,
+      "val_episodes": 117
+    },
+    "supergroup": {
+      "total_valid_episodes": 78,
+      "train_episodes": 67,
+      "val_episodes": 11
+    },
+    "group": {
+      "total_valid_episodes": 579,
+      "train_episodes": 493,
+      "val_episodes": 86
+    }
+  },
+  "train_file": "data\\train.jsonl",
+  "val_file": "data\\val.jsonl"
+}
