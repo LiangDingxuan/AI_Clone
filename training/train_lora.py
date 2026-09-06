@@ -242,14 +242,78 @@ def train(args: argparse.Namespace) -> None:
     import torch
     from datasets import load_dataset
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+    import inspect
+    import warnings
+    import numpy as np
     from transformers import (
         AutoModelForCausalLM,
         AutoTokenizer,
         BitsAndBytesConfig,
+        DataCollatorForLanguageModeling,
         EarlyStoppingCallback,
         TrainingArguments,
     )
-    from trl import DataCollatorForCompletionOnlyLM, SFTTrainer
+
+    try:
+        from trl import DataCollatorForCompletionOnlyLM
+    except ImportError:
+        DataCollatorForCompletionOnlyLM = None
+
+    try:
+        from trl import SFTConfig
+    except ImportError:
+        SFTConfig = None
+
+    from trl import SFTTrainer
+
+    class CustomDataCollatorForCompletionOnlyLM(DataCollatorForLanguageModeling):
+        """Fallback completion-only collator masking prompt tokens with -100."""
+        def __init__(
+            self,
+            response_template: str | list[int],
+            instruction_template: str | list[int] | None = None,
+            *c_args,
+            mlm: bool = False,
+            ignore_index: int = -100,
+            **c_kwargs,
+        ):
+            super().__init__(*c_args, mlm=mlm, **c_kwargs)
+            self.instruction_template = instruction_template
+            if isinstance(instruction_template, str):
+                self.instruction_token_ids = self.tokenizer.encode(self.instruction_template, add_special_tokens=False)
+            else:
+                self.instruction_token_ids = instruction_template
+
+            self.response_template = response_template
+            if isinstance(response_template, str):
+                self.response_token_ids = self.tokenizer.encode(self.response_template, add_special_tokens=False)
+            else:
+                self.response_token_ids = response_template
+
+            self.ignore_index = ignore_index
+
+        def torch_call(self, examples: list[Any]) -> dict[str, Any]:
+            batch = super().torch_call(examples)
+            if self.instruction_template is None:
+                for i in range(len(examples)):
+                    response_token_ids_start_idx = None
+                    for idx in np.where(batch["labels"][i] == self.response_token_ids[0])[0]:
+                        if (
+                            self.response_token_ids
+                            == batch["labels"][i][idx : idx + len(self.response_token_ids)].tolist()
+                        ):
+                            response_token_ids_start_idx = idx
+
+                    if response_token_ids_start_idx is None:
+                        warnings.warn(
+                            f"Could not find response key `{self.response_template}` in sequence. "
+                            f"This instance will be ignored in loss calculation."
+                        )
+                        batch["labels"][i, :] = self.ignore_index
+                    else:
+                        response_token_ids_end_idx = response_token_ids_start_idx + len(self.response_token_ids)
+                        batch["labels"][i, :response_token_ids_end_idx] = self.ignore_index
+            return batch
 
     if not torch.cuda.is_available():
         logger.error(
@@ -337,7 +401,8 @@ def train(args: argparse.Namespace) -> None:
     # 7. Completion-Only Data Collator (Safeguard against Doppelganger Drift)
     response_template = detect_response_template(args.model_name)
     logger.info("Using response template for completion loss: %s", repr(response_template))
-    collator = DataCollatorForCompletionOnlyLM(
+    collator_cls = DataCollatorForCompletionOnlyLM or CustomDataCollatorForCompletionOnlyLM
+    collator = collator_cls(
         response_template=response_template,
         tokenizer=tokenizer,
     )
@@ -346,7 +411,7 @@ def train(args: argparse.Namespace) -> None:
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    training_args = TrainingArguments(
+    common_training_kwargs = dict(
         output_dir=str(out_dir),
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
@@ -371,21 +436,44 @@ def train(args: argparse.Namespace) -> None:
         report_to="none",
     )
 
+    if SFTConfig is not None:
+        training_args = SFTConfig(
+            **common_training_kwargs,
+            max_length=args.max_seq_length,
+            assistant_only_loss=True,
+        )
+    else:
+        training_args = TrainingArguments(**common_training_kwargs)
+
     # 9. Initialize SFTTrainer with EarlyStoppingCallback
-    trainer = SFTTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset["train"],
-        eval_dataset=dataset["validation"],
-        data_collator=collator,
-        max_seq_length=args.max_seq_length,
-        tokenizer=tokenizer,
-        callbacks=[
+    sft_params = inspect.signature(SFTTrainer.__init__).parameters
+    trainer_kwargs = {
+        "model": model,
+        "args": training_args,
+        "train_dataset": dataset["train"],
+        "eval_dataset": dataset["validation"],
+        "callbacks": [
             EarlyStoppingCallback(
                 early_stopping_patience=args.early_stopping_patience,
             ),
         ],
-    )
+    }
+
+    # Pass tokenizer using modern (processing_class) or legacy (tokenizer) parameter name
+    if "processing_class" in sft_params:
+        trainer_kwargs["processing_class"] = tokenizer
+    elif "tokenizer" in sft_params:
+        trainer_kwargs["tokenizer"] = tokenizer
+
+    # max_seq_length is passed to SFTTrainer in older TRL; in newer TRL it is inside SFTConfig
+    if "max_seq_length" in sft_params:
+        trainer_kwargs["max_seq_length"] = args.max_seq_length
+
+    # If assistant_only_loss is not handled by SFTConfig, supply completion collator
+    if not getattr(training_args, "assistant_only_loss", False):
+        trainer_kwargs["data_collator"] = collator
+
+    trainer = SFTTrainer(**trainer_kwargs)
 
     # 10. Execute Training
     logger.info("Starting QLoRA fine-tuning...")

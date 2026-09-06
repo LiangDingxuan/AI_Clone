@@ -30,6 +30,16 @@ python training\train_lora.py ^
     --early-stopping-patience 2 ^
     --merge-adapter
 
+if %errorlevel% neq 0 (
+    echo.
+    echo ======================================================================
+    echo [ERROR] Training encountered an error (exit code %errorlevel%).
+    echo Check the error traceback above.
+    echo ======================================================================
+    pause
+    exit /b %errorlevel%
+)
+
 echo.
 echo ======================================================================
 echo [SUCCESS] Training finished! Best checkpoint is in checkpoints/dingxuan_lora
