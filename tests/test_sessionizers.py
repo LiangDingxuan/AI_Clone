@@ -6,13 +6,22 @@ import sys
 import unittest
 from pathlib import Path
 
-# Add project root to sys.path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+CLEANING_DIR = PROJECT_ROOT / "data_cleaning"
+for p in [str(PROJECT_ROOT), str(CLEANING_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
-from shared.models import Turn, Conversation, merge_into_turns
-from shared.data_loader import prepare_messages
-from approach_1_rule_based.sessionizer import sessionize_personal_chats
-from approach_3_ai_llm.sessionizer import sessionize_with_llm
+try:
+    from data_cleaning.shared.models import Turn, Conversation, merge_into_turns
+    from data_cleaning.shared.data_loader import prepare_messages
+    from data_cleaning.approach_1_rule_based.sessionizer import sessionize_personal_chats
+    from data_cleaning.approach_3_ai_llm.sessionizer import sessionize_with_llm
+except ImportError:
+    from shared.models import Turn, Conversation, merge_into_turns
+    from shared.data_loader import prepare_messages
+    from approach_1_rule_based.sessionizer import sessionize_personal_chats
+    from approach_3_ai_llm.sessionizer import sessionize_with_llm
 
 
 class TestSharedModels(unittest.TestCase):

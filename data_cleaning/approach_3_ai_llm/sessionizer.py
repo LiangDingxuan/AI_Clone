@@ -11,7 +11,12 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+APPROACH_DIR = Path(__file__).resolve().parent
+CLEANING_DIR = APPROACH_DIR.parent
+PROJECT_ROOT = CLEANING_DIR.parent
+for p in [str(PROJECT_ROOT), str(CLEANING_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from shared.models import Turn, Conversation, merge_into_turns
 from shared.data_loader import prepare_messages

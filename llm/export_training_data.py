@@ -27,8 +27,18 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from profiler import MultiContextProfiler, is_dingxuan_sender, load_context_sessions, normalize_session_turns
-from synthesizer import SystemPromptSynthesizer
+LLM_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = LLM_DIR.parent
+for p in [str(PROJECT_ROOT), str(LLM_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from llm.profiler import MultiContextProfiler, is_dingxuan_sender, load_context_sessions, normalize_session_turns
+    from llm.synthesizer import SystemPromptSynthesizer
+except ImportError:
+    from profiler import MultiContextProfiler, is_dingxuan_sender, load_context_sessions, normalize_session_turns
+    from synthesizer import SystemPromptSynthesizer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -157,9 +167,9 @@ class DatasetExporter:
     """Orchestrates multi-context loading, formatting, splitting, and JSONL export."""
 
     DEFAULT_SOURCES = {
-        "personal_chat": Path("approach_1_rule_based/output/sessions_personal_chat.json"),
-        "supergroup": Path("approach_2_nlp_embeddings/output/sessions_supergroup.json"),
-        "group": Path("approach_3_ai_llm/output/sessions_group.json"),
+        "personal_chat": Path("data_cleaning/approach_1_rule_based/output/sessions_personal_chat.json"),
+        "supergroup": Path("data_cleaning/approach_2_nlp_embeddings/output/sessions_supergroup.json"),
+        "group": Path("data_cleaning/approach_3_ai_llm/output/sessions_group.json"),
     }
 
     def __init__(
@@ -195,8 +205,18 @@ class DatasetExporter:
         for ctx_key, file_path in sources.items():
             path = Path(file_path)
             if not path.is_file():
-                logger.warning("Source file not found for context '%s': %s", ctx_key, path)
-                continue
+                candidates = [
+                    PROJECT_ROOT / file_path,
+                    PROJECT_ROOT / str(file_path).replace("data_cleaning/", ""),
+                    LLM_DIR / file_path,
+                    PROJECT_ROOT / "data_cleaning" / file_path,
+                ]
+                found = next((c for c in candidates if c.is_file()), None)
+                if found:
+                    path = found
+                else:
+                    logger.warning("Source file not found for context '%s': %s", ctx_key, path)
+                    continue
 
             sessions = load_context_sessions(path)
             total_sessions_inspected += len(sessions)
@@ -286,14 +306,28 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
+    default_output_dir = str(LLM_DIR / "data")
     parser = argparse.ArgumentParser(description="Export cleaned sessions into QLoRA SFT training datasets.")
-    parser.add_argument("--output-dir", "-o", default="data", help="Output directory for JSONL files")
+    parser.add_argument("--output-dir", "-o", default=default_output_dir, help=f"Output directory for JSONL files (default: {default_output_dir})")
     parser.add_argument("--val-ratio", "-v", type=float, default=0.15, help="Validation set ratio (default: 0.15)")
     parser.add_argument("--seed", "-s", type=int, default=42, help="Random seed for reproducibility (default: 42)")
     args = parser.parse_args()
 
     exporter = DatasetExporter()
     summary = exporter.export(output_dir=args.output_dir, val_ratio=args.val_ratio, seed=args.seed)
+
+    # If exported to llm/data, also mirror to project root data/ if different
+    root_data = PROJECT_ROOT / "data"
+    if Path(args.output_dir).resolve() == (LLM_DIR / "data").resolve() and root_data != (LLM_DIR / "data"):
+        try:
+            root_data.mkdir(parents=True, exist_ok=True)
+            import shutil
+            for f in ["train.jsonl", "val.jsonl", "training_data_summary.json"]:
+                src = (LLM_DIR / "data" / f)
+                if src.is_file():
+                    shutil.copy2(src, root_data / f)
+        except Exception:
+            pass
 
     print("=" * 70)
     print(" TRAINING DATASET EXPORT SUMMARY")

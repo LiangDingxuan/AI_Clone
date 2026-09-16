@@ -1,8 +1,8 @@
 """
-Master Pipeline Runner: Telegram Chat History to AI Clone Training Conversations.
+Data Cleaning & Sessionization Pipeline Runner.
 
-Executes all cleaning, sorting, and sessionization steps end-to-end:
-  Step 1: Sort raw Telegram export by chat type (data_cleaning/chat_sorter.py)
+Executes all Telegram chat history cleaning, sorting, and sessionization steps:
+  Step 1: Sort raw Telegram export by chat type (chat_sorter.py)
   Step 2: Approach 1 - Rule-based sessionizer for personal chats (DMs)
   Step 3: Approach 2 - NLP embedding semantic sessionizer for supergroups
   Step 4: Approach 3 - AI/LLM contextual disentanglement for private groups
@@ -15,10 +15,9 @@ import time
 from pathlib import Path
 
 # Add project root and data_cleaning to sys.path
-PROJECT_ROOT = Path(__file__).resolve().parent
-CLEANING_DIR = PROJECT_ROOT / "data_cleaning"
-LLM_DIR = PROJECT_ROOT / "llm"
-for p in [str(PROJECT_ROOT), str(CLEANING_DIR), str(LLM_DIR)]:
+CLEANING_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CLEANING_DIR.parent
+for p in [str(PROJECT_ROOT), str(CLEANING_DIR)]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
@@ -35,7 +34,19 @@ from data_cleaning.approach_2_nlp_embeddings.sessionizer import sessionize_with_
 from data_cleaning.approach_3_ai_llm.sessionizer import sessionize_with_llm
 
 
-def run_pipeline(
+def resolve_file(path_str: str, default_dir: Path) -> Path:
+    """Finds a file in path_str directly, under default_dir, or under PROJECT_ROOT."""
+    p = Path(path_str)
+    if p.is_file():
+        return p
+    if (default_dir / path_str).is_file():
+        return default_dir / path_str
+    if (PROJECT_ROOT / path_str).is_file():
+        return PROJECT_ROOT / path_str
+    return default_dir / path_str
+
+
+def run_cleaning_pipeline(
     raw_input: str = "telegramChatHistory.json",
     sorted_output: str = "sorted_chats_by_type.json",
     summary_output: str = "chats_summary.json",
@@ -57,29 +68,21 @@ def run_pipeline(
     start_total_time = time.time()
 
     print("=" * 80)
-    print(" AI CLONE TRAINING DATA PIPELINE - LIANG DINGXUAN")
-    print(" End-to-End Cleaning, Sorting, and Multi-Approach Sessionization")
+    print(" DATA CLEANING & SESSIONIZATION PIPELINE - LIANG DINGXUAN")
+    print(" Categorization & Multi-Approach Conversational Sessionization")
     print("=" * 80)
 
-    # -------------------------------------------------------------------------
-    # STEP 1: Sort raw telegramChatHistory.json by type
-    # -------------------------------------------------------------------------
-    sorted_path = CLEANING_DIR / sorted_output
-    if not sorted_path.exists() and (PROJECT_ROOT / sorted_output).exists():
-        sorted_path = PROJECT_ROOT / sorted_output
-
+    # STEP 1: Sort raw export
+    sorted_path = resolve_file(sorted_output, CLEANING_DIR)
     if skip_step1 and sorted_path.exists():
-        print(f"\n[Step 1/4] Skipping raw chat sorting (using existing {sorted_path.name}).")
+        print(f"\n[Step 1/4] Skipping raw chat sorting (using existing {sorted_path}).")
     else:
         print("\n" + "-" * 80)
         print("[Step 1/4] Sorting Raw Telegram Export by Chat Type")
         print("-" * 80)
         step1_start = time.time()
 
-        raw_path = PROJECT_ROOT / raw_input
-        if not raw_path.is_file() and (CLEANING_DIR / raw_input).is_file():
-            raw_path = CLEANING_DIR / raw_input
-
+        raw_path = resolve_file(raw_input, PROJECT_ROOT)
         print(f"Loading raw export: {raw_path}...")
         raw_data = load_telegram_data(str(raw_path))
 
@@ -103,14 +106,10 @@ def run_pipeline(
         )
         print(f"[Step 1 Complete] Took {time.time() - step1_start:.2f}s")
 
-    # Load sorted data for downstream sessionizers
-    sorted_data = load_sorted_data(str(sorted_path))
-
+    sorted_data = load_sorted_data(sorted_path)
     results_summary = {}
 
-    # -------------------------------------------------------------------------
-    # STEP 2: Approach 1 - Rule-based Sessionizer (Personal Chats)
-    # -------------------------------------------------------------------------
+    # STEP 2: Approach 1 - Personal Chats
     if skip_approach1:
         print("\n[Step 2/4] Skipping Approach 1 (Personal Chats).")
     else:
@@ -136,15 +135,13 @@ def run_pipeline(
             "conversations": len(dm_convs),
             "target_turns": sum(c.target_user_turn_count for c in dm_convs),
             "total_turns": sum(c.turn_count for c in dm_convs),
-            "output_file": dm_output.relative_to(PROJECT_ROOT),
+            "output_file": dm_output,
         }
         print(f"[Step 2 Complete] Took {time.time() - step2_start:.2f}s")
 
-    # -------------------------------------------------------------------------
-    # STEP 3: Approach 2 - NLP Embeddings Sessionizer (Supergroups)
-    # -------------------------------------------------------------------------
+    # STEP 3: Approach 2 - Supergroups
     if skip_approach2:
-        print("\n[Step 3/4] Skipping Approach 2 (NLP Embeddings Supergroups).")
+        print("\n[Step 3/4] Skipping Approach 2 (Supergroups).")
     else:
         print("\n" + "-" * 80)
         print("[Step 3/4] Approach 2: NLP Embeddings Semantic Sessionizer (Supergroups)")
@@ -170,13 +167,11 @@ def run_pipeline(
             "conversations": len(sg_convs),
             "target_turns": sum(c.target_user_turn_count for c in sg_convs),
             "total_turns": sum(c.turn_count for c in sg_convs),
-            "output_file": sg_output.relative_to(PROJECT_ROOT),
+            "output_file": sg_output,
         }
         print(f"[Step 3 Complete] Took {time.time() - step3_start:.2f}s")
 
-    # -------------------------------------------------------------------------
-    # STEP 4: Approach 3 - AI/LLM Contextual Disentanglement (Private Groups)
-    # -------------------------------------------------------------------------
+    # STEP 4: Approach 3 - Private Groups
     if skip_approach3:
         print("\n[Step 4/4] Skipping Approach 3 (Private Groups).")
     else:
@@ -206,48 +201,17 @@ def run_pipeline(
             "conversations": len(grp_convs),
             "target_turns": sum(c.target_user_turn_count for c in grp_convs),
             "total_turns": sum(c.turn_count for c in grp_convs),
-            "output_file": grp_output.relative_to(PROJECT_ROOT),
+            "output_file": grp_output,
         }
         print(f"[Step 4 Complete] Took {time.time() - step4_start:.2f}s")
 
-    # -------------------------------------------------------------------------
-    # FINAL SUMMARY DASHBOARD
-    # -------------------------------------------------------------------------
     total_pipeline_time = time.time() - start_total_time
     print("\n" + "=" * 80)
-    print(" FINAL PIPELINE EXECUTION SUMMARY")
+    print(" DATA CLEANING PIPELINE COMPLETE")
     print(f" Total Elapsed Time: {total_pipeline_time:.2f}s")
     print("=" * 80)
-    print(f"{'Approach / Stage':<32} | {'Conversations':<15} | {'Dingxuan Turns':<16} | {'Total Turns':<12}")
-    print("-" * 80)
-
-    total_convs = 0
-    total_target_turns = 0
-    total_turns_all = 0
-
     for name, stats in results_summary.items():
-        print(
-            f"{name:<32} | "
-            f"{stats['conversations']:<15} | "
-            f"{stats['target_turns']:<16} | "
-            f"{stats['total_turns']:<12}"
-        )
-        total_convs += stats["conversations"]
-        total_target_turns += stats["target_turns"]
-        total_turns_all += stats["total_turns"]
-
-    print("-" * 80)
-    print(
-        f"{'TOTAL CLEANED CONVERSATIONS':<32} | "
-        f"{total_convs:<15} | "
-        f"{total_target_turns:<16} | "
-        f"{total_turns_all:<12}"
-    )
-    print("=" * 80)
-    print("\nGenerated Training Data Files:")
-    for name, stats in results_summary.items():
-        print(f"  - {stats['output_file']}")
-    print("\nAll tasks completed successfully!")
+        print(f"  - {name}: {stats['conversations']} sessions -> {stats['output_file']}")
 
 
 def main():
@@ -255,7 +219,7 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8")
 
     parser = argparse.ArgumentParser(
-        description="Run end-to-end data pipeline: sort Telegram export and run all 3 sessionizer approaches."
+        description="Run data cleaning and sessionization pipeline for AI Clone."
     )
     parser.add_argument("--input", "-i", default="telegramChatHistory.json", help="Path to raw Telegram JSON export")
     parser.add_argument("--sorted-output", default="sorted_chats_by_type.json", help="Path to sorted chats JSON")
@@ -277,7 +241,7 @@ def main():
 
     args = parser.parse_args()
 
-    run_pipeline(
+    run_cleaning_pipeline(
         raw_input=args.input,
         sorted_output=args.sorted_output,
         summary_output=args.summary_output,

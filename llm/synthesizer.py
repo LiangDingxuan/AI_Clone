@@ -18,7 +18,30 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from profiler import BigFiveCard, ContextProfile, FewShotPair, LinguisticMetrics, MultiContextProfiler, build_default_profile
+LLM_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = LLM_DIR.parent
+for p in [str(PROJECT_ROOT), str(LLM_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from llm.profiler import (
+        BigFiveCard,
+        ContextProfile,
+        FewShotPair,
+        LinguisticMetrics,
+        MultiContextProfiler,
+        build_default_profile,
+    )
+except ImportError:
+    from profiler import (
+        BigFiveCard,
+        ContextProfile,
+        FewShotPair,
+        LinguisticMetrics,
+        MultiContextProfiler,
+        build_default_profile,
+    )
 
 
 class SystemPromptSynthesizer:

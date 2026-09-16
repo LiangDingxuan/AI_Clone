@@ -7,26 +7,55 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+import sys
 
-from chat_app import (
-    PersonalityChatApp,
-    RefusalDeflectionLayer,
-    SimulatedClient,
-)
-from profiler import (
-    BigFiveCard,
-    ContextProfile,
-    LinguisticMetrics,
-    MultiContextProfiler,
-    build_default_profile,
-    estimate_big_five,
-    extract_linguistic_metrics,
-    is_dingxuan_sender,
-    load_context_sessions,
-    mine_linguistic_exemplars,
-    normalize_session_turns,
-)
-from synthesizer import SystemPromptSynthesizer
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+LLM_DIR = PROJECT_ROOT / "llm"
+CLEANING_DIR = PROJECT_ROOT / "data_cleaning"
+for p in [str(PROJECT_ROOT), str(LLM_DIR), str(CLEANING_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from llm.chat_app import (
+        PersonalityChatApp,
+        RefusalDeflectionLayer,
+        SimulatedClient,
+    )
+    from llm.profiler import (
+        BigFiveCard,
+        ContextProfile,
+        LinguisticMetrics,
+        MultiContextProfiler,
+        build_default_profile,
+        estimate_big_five,
+        extract_linguistic_metrics,
+        is_dingxuan_sender,
+        load_context_sessions,
+        mine_linguistic_exemplars,
+        normalize_session_turns,
+    )
+    from llm.synthesizer import SystemPromptSynthesizer
+except ImportError:
+    from chat_app import (
+        PersonalityChatApp,
+        RefusalDeflectionLayer,
+        SimulatedClient,
+    )
+    from profiler import (
+        BigFiveCard,
+        ContextProfile,
+        LinguisticMetrics,
+        MultiContextProfiler,
+        build_default_profile,
+        estimate_big_five,
+        extract_linguistic_metrics,
+        is_dingxuan_sender,
+        load_context_sessions,
+        mine_linguistic_exemplars,
+        normalize_session_turns,
+    )
+    from synthesizer import SystemPromptSynthesizer
 
 
 class TestProfilerModule(unittest.TestCase):

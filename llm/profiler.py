@@ -741,9 +741,9 @@ class MultiContextProfiler:
     """
 
     DEFAULT_DATA_PATHS = {
-        "personal_chat": Path("approach_1_rule_based/output/sessions_personal_chat.json"),
-        "supergroup": Path("approach_2_nlp_embeddings/output/sessions_supergroup.json"),
-        "group": Path("approach_3_ai_llm/output/sessions_group.json"),
+        "personal_chat": Path("data_cleaning/approach_1_rule_based/output/sessions_personal_chat.json"),
+        "supergroup": Path("data_cleaning/approach_2_nlp_embeddings/output/sessions_supergroup.json"),
+        "group": Path("data_cleaning/approach_3_ai_llm/output/sessions_group.json"),
     }
 
     CONTEXT_LABELS = {
@@ -765,11 +765,20 @@ class MultiContextProfiler:
         Analyzes a single social context dataset and returns the resulting ContextProfile.
         If file loading fails or data is missing, gracefully falls back to the default profile.
         """
-        resolved_path = (
-            Path(file_path)
-            if file_path
-            else self.base_dir / self.DEFAULT_DATA_PATHS.get(context_type, f"sessions_{context_type}.json")
-        )
+        if file_path:
+            resolved_path = Path(file_path)
+        else:
+            rel = self.DEFAULT_DATA_PATHS.get(context_type, Path(f"sessions_{context_type}.json"))
+            project_root = Path(__file__).resolve().parent.parent
+            candidates = [
+                self.base_dir / rel,
+                project_root / rel,
+                # Also fallback to legacy paths or approach directories directly
+                project_root / str(rel).replace("data_cleaning/", ""),
+                Path(rel),
+                self.base_dir / f"sessions_{context_type}.json",
+            ]
+            resolved_path = next((c for c in candidates if c.is_file()), candidates[0])
 
         display_name = self.CONTEXT_LABELS.get(context_type, context_type.title())
 
@@ -876,8 +885,15 @@ def main():
             clean_resp = ex.target_response.replace('\n', ' ')
             print(f"    {i}. User: \"{ex.user_message}\" -> Dingxuan: \"{clean_resp}\"")
 
-    output_path = Path("profiles_summary.json")
+    output_path = Path(__file__).resolve().parent / "profiles_summary.json"
     profiler.export_summary_json(output_path)
+    # Also save to project root for convenience
+    root_summary = Path(__file__).resolve().parent.parent / "profiles_summary.json"
+    if root_summary != output_path:
+        try:
+            profiler.export_summary_json(root_summary)
+        except Exception:
+            pass
     print(f"\n[OK] Summary saved to: {output_path}")
 
 

@@ -165,6 +165,28 @@ def detect_response_template(model_name: str) -> str:
     return "<|im_start|>assistant\n"
 
 
+TRAINING_DIR = Path(__file__).resolve().parent
+LLM_DIR = TRAINING_DIR.parent
+PROJECT_ROOT = LLM_DIR.parent
+
+
+def resolve_dataset_path(file_path: str) -> str:
+    """Resolves dataset path across cwd, llm/data, and project root."""
+    p = Path(file_path)
+    if p.is_file():
+        return str(p)
+    candidates = [
+        LLM_DIR / file_path,
+        PROJECT_ROOT / file_path,
+        LLM_DIR / "data" / p.name,
+        PROJECT_ROOT / "data" / p.name,
+    ]
+    for c in candidates:
+        if c.is_file():
+            return str(c)
+    return file_path
+
+
 def run_dry_run_validation(args: argparse.Namespace) -> None:
     """Performs CPU-friendly validation of data files, schemas, and configurations."""
     print("=" * 70)
@@ -182,8 +204,10 @@ def run_dry_run_validation(args: argparse.Namespace) -> None:
     print(f"Output Checkpoint Dir   : {args.output_dir}")
 
     # Check files exist
-    train_p = Path(args.train_file)
-    val_p = Path(args.val_file)
+    train_resolved = resolve_dataset_path(args.train_file)
+    val_resolved = resolve_dataset_path(args.val_file)
+    train_p = Path(train_resolved)
+    val_p = Path(val_resolved)
 
     if not train_p.is_file():
         raise FileNotFoundError(f"Training dataset not found: {train_p}. Run export_training_data.py first.")
@@ -390,11 +414,13 @@ def train(args: argparse.Namespace) -> None:
 
     # 6. Load Datasets
     logger.info("Loading JSONL datasets...")
+    train_file = resolve_dataset_path(args.train_file)
+    val_file = resolve_dataset_path(args.val_file)
     dataset = load_dataset(
         "json",
         data_files={
-            "train": args.train_file,
-            "validation": args.val_file,
+            "train": train_file,
+            "validation": val_file,
         },
     )
 

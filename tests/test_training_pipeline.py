@@ -12,15 +12,33 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+import sys
 from unittest.mock import MagicMock, patch
 
-from export_training_data import (
-    DatasetExporter,
-    format_conversation_for_sft,
-    is_distractor_message,
-)
-from synthesizer import SystemPromptSynthesizer
-from training.train_lora import detect_response_template, parse_args, run_dry_run_validation
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+LLM_DIR = PROJECT_ROOT / "llm"
+TRAINING_DIR = LLM_DIR / "training"
+CLEANING_DIR = PROJECT_ROOT / "data_cleaning"
+for p in [str(PROJECT_ROOT), str(LLM_DIR), str(TRAINING_DIR), str(CLEANING_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from llm.export_training_data import (
+        DatasetExporter,
+        format_conversation_for_sft,
+        is_distractor_message,
+    )
+    from llm.synthesizer import SystemPromptSynthesizer
+    from llm.training.train_lora import detect_response_template, parse_args, run_dry_run_validation
+except ImportError:
+    from export_training_data import (
+        DatasetExporter,
+        format_conversation_for_sft,
+        is_distractor_message,
+    )
+    from synthesizer import SystemPromptSynthesizer
+    from training.train_lora import detect_response_template, parse_args, run_dry_run_validation
 
 
 class TestDistractorFilterAndFormatting(unittest.TestCase):
@@ -200,7 +218,10 @@ class TestChatAppAdapterIntegration(unittest.TestCase):
     """Tests chat_app.py adapter argument passing."""
 
     def test_create_llm_client_with_adapter(self):
-        from chat_app import HuggingFaceClient, create_llm_client
+        try:
+            from llm.chat_app import HuggingFaceClient, create_llm_client
+        except ImportError:
+            from chat_app import HuggingFaceClient, create_llm_client
 
         # If adapter path is passed, create_llm_client should select HuggingFaceClient
         with patch.object(HuggingFaceClient, "__init__", return_value=None) as mock_init:

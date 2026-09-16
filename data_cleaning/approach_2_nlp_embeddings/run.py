@@ -6,8 +6,13 @@ import argparse
 import sys
 from pathlib import Path
 
-# Add project root to sys.path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Add project root and data_cleaning to sys.path
+APPROACH_DIR = Path(__file__).resolve().parent
+CLEANING_DIR = APPROACH_DIR.parent
+PROJECT_ROOT = CLEANING_DIR.parent
+for p in [str(PROJECT_ROOT), str(CLEANING_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from shared.data_loader import load_sorted_data, get_chats_by_types
 from shared.models import export_conversations

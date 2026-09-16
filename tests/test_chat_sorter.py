@@ -8,16 +8,34 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+import sys
 
-from chat_sorter import (
-    clean_message,
-    identify_target_user,
-    is_target_user_message,
-    load_telegram_data,
-    normalize_text,
-    process_chat,
-    sort_chats_by_type,
-)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+CLEANING_DIR = PROJECT_ROOT / "data_cleaning"
+for p in [str(PROJECT_ROOT), str(CLEANING_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from data_cleaning.chat_sorter import (
+        clean_message,
+        identify_target_user,
+        is_target_user_message,
+        load_telegram_data,
+        normalize_text,
+        process_chat,
+        sort_chats_by_type,
+    )
+except ImportError:
+    from chat_sorter import (
+        clean_message,
+        identify_target_user,
+        is_target_user_message,
+        load_telegram_data,
+        normalize_text,
+        process_chat,
+        sort_chats_by_type,
+    )
 
 
 class TestChatSorter(unittest.TestCase):

@@ -34,12 +34,12 @@ Raw Telegram export files (`telegramChatHistory.json`) contain continuous multi-
 
 | Stage / Component | Target Data Type | Method | Scope / Size | Dingxuan Turns | Output File / Artifact |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Step 1: Chat Sorter** | All Chats | Sort by Type & Prune 0-message chats | 71 active chats | 9,716 msgs | `sorted_chats_by_type.json` (52 MB)<br>`chats_summary.json` (19 KB) |
-| **Step 2: Approach 1** | `personal_chat` (DMs) | Idle Gap (3h) + Burst Merge (90s) + Reply Graph | **909** conversations | **3,478** turns | `approach_1_rule_based/output/sessions_personal_chat.json` (4.79 MB) |
-| **Step 3: Approach 2** | `private_supergroup` | SentenceTransformer + Cosine Similarity (<0.3) | **190** conversations | **201** turns | `approach_2_nlp_embeddings/output/sessions_supergroup.json` (0.39 MB) |
-| **Step 4: Approach 3** | `private_group` | Gemini 2.5 Flash LLM / Fallback Chunking | **641** conversations | **2,277** turns | `approach_3_ai_llm/output/sessions_group.json` (10.64 MB) |
-| **Step 5: Profiler** | All Cleaned Sessions | Empirical Lexical Mining & Big-5 Trait Scoring | 1,740 episodes | 5,956 turns | `profiles_summary.json` (12 KB) |
-| **Step 6: SFT Exporter** | Training JSONL | Distractor Filter, Multi-Party Tags, Strict Alternation | **1,437** SFT episodes | **4,967** assistant turns | `data/train.jsonl` (7.8 MB)<br>`data/val.jsonl` (1.35 MB) |
+| **Step 1: Chat Sorter** | All Chats | Sort by Type & Prune 0-message chats | 71 active chats | 9,716 msgs | `data_cleaning/sorted_chats_by_type.json` (52 MB)<br>`data_cleaning/chats_summary.json` (19 KB) |
+| **Step 2: Approach 1** | `personal_chat` (DMs) | Idle Gap (3h) + Burst Merge (90s) + Reply Graph | **909** conversations | **3,478** turns | `data_cleaning/approach_1_rule_based/output/sessions_personal_chat.json` (4.79 MB) |
+| **Step 3: Approach 2** | `private_supergroup` | SentenceTransformer + Cosine Similarity (<0.3) | **190** conversations | **201** turns | `data_cleaning/approach_2_nlp_embeddings/output/sessions_supergroup.json` (0.39 MB) |
+| **Step 4: Approach 3** | `private_group` | Gemini 2.5 Flash LLM / Fallback Chunking | **641** conversations | **2,277** turns | `data_cleaning/approach_3_ai_llm/output/sessions_group.json` (10.64 MB) |
+| **Step 5: Profiler** | All Cleaned Sessions | Empirical Lexical Mining & Big-5 Trait Scoring | 1,740 episodes | 5,956 turns | `llm/profiles_summary.json` (12 KB) |
+| **Step 6: SFT Exporter** | Training JSONL | Distractor Filter, Multi-Party Tags, Strict Alternation | **1,437** SFT episodes | **4,967** assistant turns | `llm/data/train.jsonl` (7.8 MB)<br>`llm/data/val.jsonl` (1.35 MB) |
 | **Step 7: QLoRA Trainer** | Open-Source LLMs | Heretic Abliteration, 4-bit NF4, Style-Boost (α=64), Early Stopping | Qwen-2.5 (Abliterated) / LLaMA-3 | Full SFT Adapter | `checkpoints/dingxuan_lora/adapter` |
 
 ---
@@ -71,9 +71,9 @@ python run_all.py
 
 ### Step 1: Raw Chat Sorting & Filtering
 
-**Script**: `chat_sorter.py` / `index.py`  
+**Script**: `data_cleaning/chat_sorter.py` / `data_cleaning/index.py` (or root `index.py`)  
 **Input**: `telegramChatHistory.json` (~76 MB raw Telegram desktop export)  
-**Outputs**: `sorted_chats_by_type.json` (52 MB), `chats_summary.json` (19 KB)
+**Outputs**: `data_cleaning/sorted_chats_by_type.json` (52 MB), `data_cleaning/chats_summary.json` (19 KB)
 
 #### What this step does:
 1. **Auto-Repair JSON**: Automatically detects and fixes syntax anomalies (e.g., dangling closing braces ` },` from manual edits).
@@ -89,16 +89,17 @@ python run_all.py
 6. **Activity Sorting**: Within each category, chats are sorted in descending order of Liang Dingxuan's message volume, placing the richest conversations at the top.
 
 ```bash
-python index.py
+python data_cleaning/index.py
+# (or python index.py)
 ```
 
 ---
 
 ### Step 2: Approach 1 — Rule-Based (1-on-1 Personal Chats)
 
-**Folder**: `approach_1_rule_based/`  
+**Folder**: `data_cleaning/approach_1_rule_based/`  
 **Target**: `personal_chat` (43 chats, 13,620 messages)  
-**Output**: `approach_1_rule_based/output/sessions_personal_chat.json` (909 conversations)
+**Output**: `data_cleaning/approach_1_rule_based/output/sessions_personal_chat.json` (909 conversations)
 
 #### Method:
 - **Burst Merge (`BURST_WINDOW = 90s`)**: Multiple consecutive short messages sent by the same user within 90 seconds are concatenated into a single coherent `Turn`.
@@ -107,16 +108,16 @@ python index.py
 - **Quality Filter**: Discards monologues (< 2 turns) and sessions without Liang Dingxuan.
 
 ```bash
-python approach_1_rule_based/run.py --idle-gap 3.0 --burst-window 90
+python data_cleaning/approach_1_rule_based/run.py --idle-gap 3.0 --burst-window 90
 ```
 
 ---
 
 ### Step 3: Approach 2 — NLP Embeddings (Supergroups / Long-Form)
 
-**Folder**: `approach_2_nlp_embeddings/`  
+**Folder**: `data_cleaning/approach_2_nlp_embeddings/`  
 **Target**: `private_supergroup` (9 chats, 48,204 messages)  
-**Output**: `approach_2_nlp_embeddings/output/sessions_supergroup.json` (190 conversations)
+**Output**: `data_cleaning/approach_2_nlp_embeddings/output/sessions_supergroup.json` (190 conversations)
 
 #### Method:
 - **Pre-split by Idle Gap (`IDLE_GAP = 4 hours`)**: Coarse temporal chunking.
@@ -127,19 +128,19 @@ python approach_1_rule_based/run.py --idle-gap 3.0 --burst-window 90
 
 ```bash
 # Install dependencies (first time only):
-pip install -r approach_2_nlp_embeddings/requirements.txt
+pip install -r data_cleaning/approach_2_nlp_embeddings/requirements.txt
 
 # Run:
-python approach_2_nlp_embeddings/run.py --similarity-threshold 0.3
+python data_cleaning/approach_2_nlp_embeddings/run.py --similarity-threshold 0.3
 ```
 
 ---
 
 ### Step 4: Approach 3 — AI/LLM Contextual Disentanglement (Group Chats)
 
-**Folder**: `approach_3_ai_llm/`  
+**Folder**: `data_cleaning/approach_3_ai_llm/`  
 **Target**: `private_group` (16 chats, 77,858 messages)  
-**Output**: `approach_3_ai_llm/output/sessions_group.json` (641 conversations)
+**Output**: `data_cleaning/approach_3_ai_llm/output/sessions_group.json` (641 conversations)
 
 #### Method:
 - **Temporal Chunking (`IDLE_GAP = 2 hours`, `CHUNK_SIZE = 50 turns`)**: Pre-splits group chat streams into manageable conversational windows.
@@ -149,11 +150,11 @@ python approach_2_nlp_embeddings/run.py --similarity-threshold 0.3
 
 ```bash
 # Offline fallback mode:
-python approach_3_ai_llm/run.py --dry-run
+python data_cleaning/approach_3_ai_llm/run.py --dry-run
 
 # Live Gemini LLM mode:
 set GEMINI_API_KEY=your_key_here
-python approach_3_ai_llm/run.py
+python data_cleaning/approach_3_ai_llm/run.py
 ```
 
 ---
@@ -164,56 +165,56 @@ python approach_3_ai_llm/run.py
 d:\LocalUser\AI_Clone\
 ├── README.md                                   # Documentation (this file)
 ├── FULL_PIPELINE_GUIDE.md                      # Exhaustive end-to-end operational runbook
-├── run_all.py                                  # Master pipeline runner
-├── index.py                                    # CLI for chat sorting
-├── chat_sorter.py                              # Core chat cleaner and sorter
-├── chats_summary.json                          # Lightweight index of sorted chats (19 KB)
-├── sorted_chats_by_type.json                   # Full cleaned & sorted Telegram export (52 MB)
+├── run_all.py                                  # Master pipeline runner (orchestrates both modules)
+├── index.py                                    # Root CLI convenience forwarder -> data_cleaning/index.py
+├── chat_app.py                                 # Root CLI convenience forwarder -> llm/chat_app.py
+├── telegramChatHistory.json                    # Raw Telegram desktop export (~76 MB)
 │
-├── profiler.py                                 # Multi-context linguistic & Big-5 personality profiler
-├── profiles_summary.json                       # Extracted personality metrics & few-shot exemplars
-├── synthesizer.py                              # Context-adaptive system prompt synthesizer
-├── export_training_data.py                     # Compiles session conversations into SFT JSONL format
-├── chat_app.py                                 # Interactive terminal chat sandbox (Simulated / HF / OpenAI)
+├── data_cleaning/                              # DATA CLEANING & SESSIONIZATION MODULE
+│   ├── __init__.py                             # Package exports
+│   ├── chat_sorter.py                          # Core chat cleaner and sorter
+│   ├── index.py                                # CLI entrypoint for chat sorting
+│   ├── run_cleaning.py                         # Pipeline runner for Steps 1-4
+│   ├── chats_summary.json                      # Lightweight index of sorted chats (19 KB)
+│   ├── sorted_chats_by_type.json               # Full cleaned & sorted Telegram export (52 MB)
+│   ├── shared/                                 # Shared data loaders & models
+│   │   ├── __init__.py
+│   │   ├── data_loader.py                      # Safe loading, type filtering, timestamp casting
+│   │   └── models.py                           # Turn, Conversation dataclasses & serialization
+│   ├── approach_1_rule_based/                  # Approach 1: DMs (idle gap + burst merge)
+│   │   ├── sessionizer.py
+│   │   ├── run.py
+│   │   └── output/sessions_personal_chat.json  # 909 conversations (4.79 MB)
+│   ├── approach_2_nlp_embeddings/              # Approach 2: Supergroups (SentenceTransformers)
+│   │   ├── requirements.txt
+│   │   ├── sessionizer.py
+│   │   ├── run.py
+│   │   └── output/sessions_supergroup.json     # 190 conversations (0.39 MB)
+│   └── approach_3_ai_llm/                      # Approach 3: Group Chats (Gemini disentanglement)
+│       ├── requirements.txt
+│       ├── sessionizer.py
+│       ├── run.py
+│       └── output/sessions_group.json          # 641 conversations (10.64 MB)
 │
-├── data/                                       # SFT Conversational Training Datasets
-│   ├── train.jsonl                             # 1,223 training episodes (7.8 MB)
-│   ├── val.jsonl                               # 214 validation episodes (1.35 MB)
-│   └── training_data_summary.json              # Dataset statistics & token breakdown
+├── llm/                                        # LLM MODELING, SFT, INFERENCE & FINE-TUNING
+│   ├── __init__.py                             # Package exports
+│   ├── profiler.py                             # Multi-context linguistic & Big-5 personality profiler
+│   ├── profiles_summary.json                   # Extracted personality metrics & few-shot exemplars
+│   ├── synthesizer.py                          # Context-adaptive system prompt synthesizer
+│   ├── export_training_data.py                 # Compiles session conversations into SFT JSONL format
+│   ├── chat_app.py                             # Interactive terminal chat sandbox (Simulated/HF/OpenAI)
+│   ├── data/                                   # SFT Conversational Training Datasets
+│   │   ├── train.jsonl                         # 1,223 training episodes (7.8 MB)
+│   │   ├── val.jsonl                           # 214 validation episodes (1.35 MB)
+│   │   └── training_data_summary.json          # Dataset statistics & token breakdown
+│   └── training/                               # Standalone GPU QLoRA Fine-Tuning Package
+│       ├── README.md                           # GPU / Google Colab / Cloud training instructions
+│       ├── requirements.txt                    # PyTorch, PEFT, TRL, BitsAndBytes dependencies
+│       ├── train_lora.py                       # 4-bit QLoRA trainer with Doppelganger safeguards
+│       ├── run_training.sh                     # Turnkey bash training runner (Linux / Cloud GPU)
+│       └── run_training.bat                    # Turnkey batch training runner (Windows GPU)
 │
-├── training/                                   # Standalone GPU QLoRA Fine-Tuning Package
-│   ├── README.md                               # GPU / Google Colab / Cloud training instructions
-│   ├── requirements.txt                        # PyTorch, PEFT, TRL, BitsAndBytes dependencies
-│   ├── train_lora.py                           # 4-bit QLoRA trainer with Doppelganger Drift safeguards
-│   ├── run_training.sh                         # Turnkey bash training runner (Linux / Cloud GPU)
-│   └── run_training.bat                        # Turnkey batch training runner (Windows GPU)
-│
-├── shared/                                     # Shared utilities
-│   ├── __init__.py
-│   ├── data_loader.py                          # Safe loading, type filtering, timestamp casting
-│   └── models.py                               # Turn, Conversation dataclasses & JSON serialization
-│
-├── approach_1_rule_based/                      # Approach 1: DMs
-│   ├── sessionizer.py
-│   ├── run.py
-│   └── output/
-│       └── sessions_personal_chat.json         # 909 conversations (4.79 MB)
-│
-├── approach_2_nlp_embeddings/                  # Approach 2: Supergroups
-│   ├── requirements.txt
-│   ├── sessionizer.py
-│   ├── run.py
-│   └── output/
-│       └── sessions_supergroup.json            # 190 conversations (0.39 MB)
-│
-├── approach_3_ai_llm/                          # Approach 3: Group Chats
-│   ├── requirements.txt
-│   ├── sessionizer.py
-│   ├── run.py
-│   └── output/
-│       └── sessions_group.json                 # 641 conversations (10.64 MB)
-│
-└── tests/                                      # Automated unit tests (30 tests passing)
+└── tests/                                      # Automated unit & integration tests (31 tests passing)
     ├── test_chat_sorter.py
     ├── test_sessionizers.py
     ├── test_personality_bot.py
@@ -278,9 +279,11 @@ All three approaches export conversations adhering to the standardized `Conversa
 
 ## Conversational SFT Dataset Compilation
 
-**Script**: `export_training_data.py`  
-**Inputs**: Session files from Approach 1, 2, and 3  
-**Outputs**: `data/train.jsonl` (7.8 MB), `data/val.jsonl` (1.35 MB), `data/training_data_summary.json`
+## Conversational SFT Dataset Compilation
+
+**Script**: `llm/export_training_data.py`  
+**Inputs**: Session files from `data_cleaning/approach_*/`  
+**Outputs**: `llm/data/train.jsonl` (7.8 MB), `llm/data/val.jsonl` (1.35 MB), `llm/data/training_data_summary.json`
 
 Transforms the 1,740 sessionized conversations into standardized multi-turn ChatML/messages JSONL datasets for QLoRA fine-tuning.
 
@@ -292,12 +295,12 @@ Transforms the 1,740 sessionized conversations into standardized multi-turn Chat
 5. **Stratified 85/15 Split**: Performs an 85% train / 15% validation split stratified across personal, group, and supergroup episodes.
 
 ```bash
-python export_training_data.py --output-dir data/
+python llm/export_training_data.py --output-dir llm/data/
 ```
 
 - **Dataset Breakdown**:
-  - `data/train.jsonl`: 1,223 episodes (4,270 Dingxuan assistant turns)
-  - `data/val.jsonl`: 214 episodes (697 Dingxuan assistant turns)
+  - `llm/data/train.jsonl`: 1,223 episodes (4,270 Dingxuan assistant turns)
+  - `llm/data/val.jsonl`: 214 episodes (697 Dingxuan assistant turns)
   - **Total**: 1,437 formatted episodes, 4,967 assistant turns
 
 ---
@@ -308,43 +311,43 @@ A style-first, 2-layer profiling architecture for simulating Dingxuan across 3 d
 
 ```
 ┌──────────────────────────────────────┐
-│ 1. Multi-Context Profiler & Analyzer │  (profiler.py)
+│ 1. Multi-Context Profiler & Analyzer │  (llm/profiler.py)
 │    (Reads Personal, Group, & Super)  │
 └──────────────────┬───────────────────┘
                    │
                    ▼
 ┌──────────────────────────────────────┐
-│ 2. Context-Adaptive Prompt Generator │  (synthesizer.py)
+│ 2. Context-Adaptive Prompt Generator │  (llm/synthesizer.py)
 │    (Extracts Big-5 & Lexics per Mode)│
 └──────────────────────────────────────┘
 ```
 
-### 1. Multi-Context Profiler (`profiler.py`)
+### 1. Multi-Context Profiler (`llm/profiler.py`)
 Analyzes 1,740 conversational episodes and 5,956 of Dingxuan's turns across:
-- **Personal DMs** (`approach_1_rule_based/output/sessions_personal_chat.json`)
-- **Supergroups** (`approach_2_nlp_embeddings/output/sessions_supergroup.json`)
-- **Group Chats** (`approach_3_ai_llm/output/sessions_group.json`)
+- **Personal DMs** (`data_cleaning/approach_1_rule_based/output/sessions_personal_chat.json`)
+- **Supergroups** (`data_cleaning/approach_2_nlp_embeddings/output/sessions_supergroup.json`)
+- **Group Chats** (`data_cleaning/approach_3_ai_llm/output/sessions_group.json`)
 
 Extracts quantitative metrics (turn length, lowercase ratio, punctuation frequency, Singlish particles like `ah`, `eh`, `cuz`, `idk`, `sia`), scores academic Big-5 personality traits (0.0 to 1.0), and mines representative few-shot QA pairs.
 
 ```bash
 # Run standalone profiling and export JSON summary:
-python profiler.py
+python llm/profiler.py
 ```
 
-### 2. Context-Adaptive Prompt Synthesizer (`synthesizer.py`)
+### 2. Context-Adaptive Prompt Synthesizer (`llm/synthesizer.py`)
 Dynamically constructs system prompts with absolute formatting constraints, Big-5 behavioral directives, lexicon guidelines, **Multi-Party Context Directives**, in-character refusal deflection instructions, and few-shot pairs.
 
 ```bash
 # Inspect generated prompt for a specific context:
-python synthesizer.py --context dm
-python synthesizer.py --context group
-python synthesizer.py --context supergroup
+python llm/synthesizer.py --context dm
+python llm/synthesizer.py --context group
+python llm/synthesizer.py --context supergroup
 ```
 
 ---
 
-## Interactive Chat Application (`chat_app.py`)
+## Interactive Chat Application (`llm/chat_app.py` / `chat_app.py`)
 
 Provides an interactive terminal conversation sandbox:
 - Prompts for chat context on start: `[1] Personal Chat (DM)`, `[2] Group Chat`, `[3] Supergroup Chat`.
@@ -354,7 +357,8 @@ Provides an interactive terminal conversation sandbox:
 
 ```bash
 # Run interactive chat (Simulated Provider):
-python chat_app.py
+python llm/chat_app.py
+# (or python chat_app.py)
 
 # Run with trained LoRA clone:
 python chat_app.py --provider hf --adapter checkpoints/dingxuan_lora/adapter
@@ -381,19 +385,19 @@ A complete, production-grade 4-bit QLoRA fine-tuning pipeline for open-source LL
 
 ```
 ┌─────────────────────────────────┐
-│ 1. export_training_data.py      │  (Filters noise, formats multi-party tags [Name]:,
-│    (Creates data/*.jsonl)       │   injects context system prompts, 85/15 split)
+│ 1. llm/export_training_data.py  │  (Filters noise, formats multi-party tags [Name]:,
+│    (Creates llm/data/*.jsonl)   │   injects context system prompts, 85/15 split)
 └────────────────┬────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────┐
-│ 2. training/train_lora.py       │  (Heretic abliterated base model, 4-bit QLoRA
+│ 2. llm/training/train_lora.py   │  (Heretic abliterated base model, 4-bit QLoRA
 │    (Runs on GPU / Colab / Cloud)│   with BitsAndBytes, Style-Boost α=64, early stopping)
 └────────────────┬────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────┐
-│ 3. chat_app.py --adapter <path> │  (Interactive inference with trained clone)
+│ 3. llm/chat_app.py --adapter ...│  (Interactive inference with trained clone)
 └─────────────────────────────────┘
 ```
 
@@ -402,13 +406,13 @@ A complete, production-grade 4-bit QLoRA fine-tuning pipeline for open-source LL
 Transform the sessionized Telegram history into standardized ChatML/messages JSONL datasets:
 
 ```bash
-python export_training_data.py --output-dir data/
+python llm/export_training_data.py --output-dir llm/data/
 ```
 
 - **Output files**:
-  - `data/train.jsonl` (1,223 episodes, 4,270 assistant turns — 7.8 MB)
-  - `data/val.jsonl` (214 episodes, 697 assistant turns — 1.35 MB)
-  - `data/training_data_summary.json` (metadata & context breakdown)
+  - `llm/data/train.jsonl` (1,223 episodes, 4,270 assistant turns — 7.8 MB)
+  - `llm/data/val.jsonl` (214 episodes, 697 assistant turns — 1.35 MB)
+  - `llm/data/training_data_summary.json` (metadata & context breakdown)
 
 ### 3. Training on Another Device with a GPU
 
@@ -418,22 +422,22 @@ After pushing to GitHub, clone the repository on any device with an NVIDIA GPU (
 ```bash
 git clone https://github.com/LiangDingxuan/AI_Clone.git
 cd AI_Clone
-bash training/run_training.sh
+bash llm/training/run_training.sh
 ```
 
 #### Windows Workstation with GPU:
 ```cmd
 git clone https://github.com/LiangDingxuan/AI_Clone.git
 cd AI_Clone
-training\run_training.bat
+llm\training\run_training.bat
 ```
 
 #### Google Colab:
 ```python
 !git clone https://github.com/LiangDingxuan/AI_Clone.git
 %cd AI_Clone
-!pip install -r training/requirements.txt
-!python training/train_lora.py --abliterated --style-boost --epochs 3 --merge-adapter
+!pip install -r llm/training/requirements.txt
+!python llm/training/train_lora.py --abliterated --style-boost --epochs 3 --merge-adapter
 ```
 
 ### 4. Advanced Hyperparameters & Safeguards
