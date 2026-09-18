@@ -303,7 +303,8 @@ try:
         def torch_call(self, examples: list[Any]) -> dict[str, Any]:
             # Filter non-tensor / nested list structures (such as 'messages') that cannot be padded as tensors
             clean_examples = [
-                {k: v for k, v in ex.items() if k in ("input_ids", "attention_mask", "labels")}
+                #{k: v for k, v in ex.items() if k in ("input_ids", "attention_mask", "labels")}
+                {k: v for k, v in ex.items() if k in ("input_ids", "attention_mask")}
                 if isinstance(ex, dict) else ex
                 for ex in examples
             ]
