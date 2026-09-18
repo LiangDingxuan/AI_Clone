@@ -137,7 +137,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--abliterated",
         action="store_true",
-        help="Use Heretic pre-abliterated model (huihui-ai/Qwen2.5-7B-Instruct-abliterated) to remove corporate refusal alignment",
+        help="Use Heretic pre-abliterated model (huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2) to remove corporate refusal alignment",
+    )
+    parser.add_argument(
+        "--hf-token",
+        type=str,
+        default=os.environ.get("HF_TOKEN"),
+        help="Hugging Face authorization token (or set HF_TOKEN env var)",
     )
     parser.add_argument(
         "--merge-adapter",
@@ -152,7 +158,7 @@ def parse_args() -> argparse.Namespace:
 
     args = parser.parse_args()
     if args.abliterated and args.model_name == "Qwen/Qwen2.5-7B-Instruct":
-        args.model_name = "huihui-ai/Qwen2.5-7B-Instruct-abliterated"
+        args.model_name = "huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2"
     return args
 
 
@@ -161,7 +167,7 @@ def detect_response_template(model_name: str) -> str:
     name_lower = model_name.lower()
     if "llama-3" in name_lower or "llama3" in name_lower or "daredevil" in name_lower:
         return "<|start_header_id|>assistant<|end_header_id|>\n\n"
-    # Default to ChatML / Qwen format (including huihui-ai/Qwen2.5-7B-Instruct-abliterated)
+    # Default to ChatML / Qwen format (including huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2)
     return "<|im_start|>assistant\n"
 
 
@@ -261,6 +267,89 @@ def run_dry_run_validation(args: argparse.Namespace) -> None:
     print("[SUCCESS] Dry-run validation passed! Ready for training on GPU.")
 
 
+try:
+    import numpy as np
+    import torch
+    from transformers import DataCollatorForLanguageModeling
+
+    class CustomDataCollatorForCompletionOnlyLM(DataCollatorForLanguageModeling):
+        """Completion-only collator masking prompt tokens with -100."""
+
+        def __init__(
+            self,
+            response_template: str | list[int],
+            instruction_template: str | list[int] | None = None,
+            *c_args,
+            mlm: bool = False,
+            ignore_index: int = -100,
+            **c_kwargs,
+        ):
+            super().__init__(*c_args, mlm=mlm, **c_kwargs)
+            self.instruction_template = instruction_template
+            self.response_template = response_template
+            if isinstance(response_template, str):
+                self.response_token_ids = self.tokenizer.encode(self.response_template, add_special_tokens=False)
+            else:
+                self.response_token_ids = response_template
+
+            self.ignore_index = ignore_index
+            self.eos_token_id = getattr(self.tokenizer, "eos_token_id", None)
+            if self.eos_token_id is None:
+                try:
+                    self.eos_token_id = self.tokenizer.encode("<|im_end|>", add_special_tokens=False)[0]
+                except Exception:
+                    self.eos_token_id = None
+
+        def torch_call(self, examples: list[Any]) -> dict[str, Any]:
+            # Filter non-tensor / nested list structures (such as 'messages') that cannot be padded as tensors
+            clean_examples = [
+                {k: v for k, v in ex.items() if k in ("input_ids", "attention_mask", "labels")}
+                if isinstance(ex, dict) else ex
+                for ex in examples
+            ]
+            batch = super().torch_call(clean_examples)
+            labels = batch["labels"].clone()
+            input_ids = batch["input_ids"]
+
+            resp_len = len(self.response_token_ids)
+            for i in range(len(examples)):
+                input_i = input_ids[i]
+                input_arr = input_i.cpu().numpy() if hasattr(input_i, "cpu") else np.array(input_i)
+                seq_len = len(input_arr)
+
+                # Initialize all positions as ignored (-100)
+                labels[i, :] = self.ignore_index
+
+                # Find all occurrences of the response_template in input_ids
+                matched_starts = [
+                    idx
+                    for idx in range(seq_len - resp_len + 1)
+                    if input_arr[idx : idx + resp_len].tolist() == self.response_token_ids
+                ]
+
+                if not matched_starts:
+                    import warnings
+                    warnings.warn(
+                        f"Could not find response template `{self.response_template}` in sequence {i}. "
+                        f"This instance will be ignored in loss calculation."
+                    )
+                    continue
+
+                for start_idx in matched_starts:
+                    content_start = start_idx + resp_len
+                    content_end = seq_len
+                    for end_candidate in range(content_start, seq_len):
+                        if input_arr[end_candidate] in (self.eos_token_id, 151645):
+                            content_end = end_candidate + 1
+                            break
+                    labels[i, content_start:content_end] = input_ids[i, content_start:content_end]
+
+            batch["labels"] = labels
+            return batch
+except ImportError:
+    CustomDataCollatorForCompletionOnlyLM = None
+
+
 def train(args: argparse.Namespace) -> None:
     """Executes the full QLoRA training loop on GPU."""
     import torch
@@ -290,55 +379,6 @@ def train(args: argparse.Namespace) -> None:
 
     from trl import SFTTrainer
 
-    class CustomDataCollatorForCompletionOnlyLM(DataCollatorForLanguageModeling):
-        """Fallback completion-only collator masking prompt tokens with -100."""
-        def __init__(
-            self,
-            response_template: str | list[int],
-            instruction_template: str | list[int] | None = None,
-            *c_args,
-            mlm: bool = False,
-            ignore_index: int = -100,
-            **c_kwargs,
-        ):
-            super().__init__(*c_args, mlm=mlm, **c_kwargs)
-            self.instruction_template = instruction_template
-            if isinstance(instruction_template, str):
-                self.instruction_token_ids = self.tokenizer.encode(self.instruction_template, add_special_tokens=False)
-            else:
-                self.instruction_token_ids = instruction_template
-
-            self.response_template = response_template
-            if isinstance(response_template, str):
-                self.response_token_ids = self.tokenizer.encode(self.response_template, add_special_tokens=False)
-            else:
-                self.response_token_ids = response_template
-
-            self.ignore_index = ignore_index
-
-        def torch_call(self, examples: list[Any]) -> dict[str, Any]:
-            batch = super().torch_call(examples)
-            if self.instruction_template is None:
-                for i in range(len(examples)):
-                    response_token_ids_start_idx = None
-                    for idx in np.where(batch["labels"][i] == self.response_token_ids[0])[0]:
-                        if (
-                            self.response_token_ids
-                            == batch["labels"][i][idx : idx + len(self.response_token_ids)].tolist()
-                        ):
-                            response_token_ids_start_idx = idx
-
-                    if response_token_ids_start_idx is None:
-                        warnings.warn(
-                            f"Could not find response key `{self.response_template}` in sequence. "
-                            f"This instance will be ignored in loss calculation."
-                        )
-                        batch["labels"][i, :] = self.ignore_index
-                    else:
-                        response_token_ids_end_idx = response_token_ids_start_idx + len(self.response_token_ids)
-                        batch["labels"][i, :response_token_ids_end_idx] = self.ignore_index
-            return batch
-
     if not torch.cuda.is_available():
         logger.error(
             "CUDA is not detected. Training a 7B model requires an NVIDIA GPU with at least 8GB VRAM.\n"
@@ -364,10 +404,25 @@ def train(args: argparse.Namespace) -> None:
 
     # 2. Tokenizer & Chat Formatting
     logger.info("Loading tokenizer for: %s", args.model_name)
-    tokenizer = AutoTokenizer.from_pretrained(
-        args.model_name,
-        trust_remote_code=True,
-    )
+    hf_token = getattr(args, "hf_token", None) or os.environ.get("HF_TOKEN")
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model_name,
+            trust_remote_code=True,
+            token=hf_token,
+        )
+    except Exception as e:
+        if "huihui-ai" in args.model_name or getattr(args, "abliterated", False):
+            logger.error(
+                "Failed to load tokenizer for '%s': %s\n"
+                "Tip: 'huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2' is the active abliterated model.\n"
+                "If accessing a private repo or gated model, provide --hf-token or set HF_TOKEN env var.\n"
+                "You can also use the official base model: --model-name Qwen/Qwen2.5-7B-Instruct",
+                args.model_name,
+                e,
+            )
+        raise
+
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
@@ -383,13 +438,26 @@ def train(args: argparse.Namespace) -> None:
 
     # 4. Load Base Model
     logger.info("Loading base model in 4-bit precision...")
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_name,
-        quantization_config=bnb_config,
-        device_map="auto",
-        trust_remote_code=True,
-        torch_dtype=compute_dtype,
-    )
+    try:
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name,
+            quantization_config=bnb_config,
+            device_map="auto",
+            trust_remote_code=True,
+            torch_dtype=compute_dtype,
+            token=hf_token,
+        )
+    except Exception as e:
+        if "huihui-ai" in args.model_name or getattr(args, "abliterated", False):
+            logger.error(
+                "Failed to load base model for '%s': %s\n"
+                "Tip: 'huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2' is the active abliterated model.\n"
+                "If accessing a private repo or gated model, provide --hf-token or set HF_TOKEN env var.\n"
+                "You can also use the official base model: --model-name Qwen/Qwen2.5-7B-Instruct",
+                args.model_name,
+                e,
+            )
+        raise
     model = prepare_model_for_kbit_training(model)
 
     # 5. LoRA Configuration
@@ -427,8 +495,7 @@ def train(args: argparse.Namespace) -> None:
     # 7. Completion-Only Data Collator (Safeguard against Doppelganger Drift)
     response_template = detect_response_template(args.model_name)
     logger.info("Using response template for completion loss: %s", repr(response_template))
-    collator_cls = DataCollatorForCompletionOnlyLM or CustomDataCollatorForCompletionOnlyLM
-    collator = collator_cls(
+    collator = CustomDataCollatorForCompletionOnlyLM(
         response_template=response_template,
         tokenizer=tokenizer,
     )
@@ -437,7 +504,42 @@ def train(args: argparse.Namespace) -> None:
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    common_training_kwargs = dict(
+    import dataclasses
+
+    config_cls = SFTConfig if SFTConfig is not None else TrainingArguments
+    valid_fields = set()
+    if dataclasses.is_dataclass(config_cls):
+        valid_fields = {f.name for f in dataclasses.fields(config_cls)}
+
+    # Warmup parameter: transformers v5+ unifies warmup into warmup_steps (float ratio),
+    # while transformers v4 uses warmup_ratio (float) and warmup_steps (int).
+    warmup_args = {}
+    if "warmup_ratio" in valid_fields:
+        warmup_args["warmup_ratio"] = 0.05
+    elif "warmup_steps" in valid_fields:
+        warmup_args["warmup_steps"] = 0.05
+
+    # Evaluation strategy parameter name: eval_strategy (modern) vs evaluation_strategy (legacy)
+    strategy_args = {}
+    if "eval_strategy" in valid_fields:
+        strategy_args["eval_strategy"] = "steps"
+    elif "evaluation_strategy" in valid_fields:
+        strategy_args["evaluation_strategy"] = "steps"
+
+    # SFT-specific configuration fields
+    sft_extra_args = {}
+    if "max_length" in valid_fields:
+        sft_extra_args["max_length"] = args.max_seq_length
+    elif "max_seq_length" in valid_fields:
+        sft_extra_args["max_seq_length"] = args.max_seq_length
+
+    # Note: We deliberately do NOT set assistant_only_loss=True in SFTConfig.
+    # In TRL 1.0+, assistant_only_loss=True triggers get_training_chat_template(),
+    # which fails with ValueError on Qwen2.5 chat templates (missing {% generation %} markers).
+    # Instead, completion-only loss masking is robustly and accurately enforced by
+    # CustomDataCollatorForCompletionOnlyLM passed as data_collator to SFTTrainer.
+
+    raw_training_kwargs = dict(
         output_dir=str(out_dir),
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
@@ -445,13 +547,11 @@ def train(args: argparse.Namespace) -> None:
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=learning_rate,
         lr_scheduler_type="cosine",
-        warmup_ratio=0.05,
         optim="paged_adamw_8bit",
         fp16=(compute_dtype == torch.float16),
         bf16=(compute_dtype == torch.bfloat16),
         max_grad_norm=1.0,
         logging_steps=10,
-        eval_strategy="steps",
         eval_steps=args.eval_steps,
         save_strategy="steps",
         save_steps=args.eval_steps,
@@ -460,16 +560,54 @@ def train(args: argparse.Namespace) -> None:
         metric_for_best_model="eval_loss",
         greater_is_better=False,
         report_to="none",
+        **warmup_args,
+        **strategy_args,
+        **sft_extra_args,
     )
 
-    if SFTConfig is not None:
-        training_args = SFTConfig(
-            **common_training_kwargs,
-            max_length=args.max_seq_length,
-            assistant_only_loss=True,
-        )
+    # Filter arguments to ensure only fields accepted by config_cls are passed
+    if valid_fields:
+        filtered_kwargs = {k: v for k, v in raw_training_kwargs.items() if k in valid_fields}
     else:
-        training_args = TrainingArguments(**common_training_kwargs)
+        filtered_kwargs = raw_training_kwargs
+
+    try:
+        training_args = config_cls(**filtered_kwargs)
+    except Exception as e:
+        logger.warning(
+            "Could not initialize %s with custom kwargs (%s). Falling back to TrainingArguments.",
+            config_cls.__name__,
+            e,
+        )
+        ta_fields = {f.name for f in dataclasses.fields(TrainingArguments)} if dataclasses.is_dataclass(TrainingArguments) else set()
+        ta_warmup = {"warmup_ratio": 0.05} if "warmup_ratio" in ta_fields else {"warmup_steps": 0.05}
+        ta_strat = {"eval_strategy": "steps"} if "eval_strategy" in ta_fields else {"evaluation_strategy": "steps"}
+        fallback_raw = dict(
+            output_dir=str(out_dir),
+            num_train_epochs=args.epochs,
+            per_device_train_batch_size=args.batch_size,
+            per_device_eval_batch_size=args.batch_size,
+            gradient_accumulation_steps=args.grad_accum,
+            learning_rate=learning_rate,
+            lr_scheduler_type="cosine",
+            optim="paged_adamw_8bit",
+            fp16=(compute_dtype == torch.float16),
+            bf16=(compute_dtype == torch.bfloat16),
+            max_grad_norm=1.0,
+            logging_steps=10,
+            eval_steps=args.eval_steps,
+            save_strategy="steps",
+            save_steps=args.eval_steps,
+            save_total_limit=2,
+            load_best_model_at_end=True,
+            metric_for_best_model="eval_loss",
+            greater_is_better=False,
+            report_to="none",
+            **ta_warmup,
+            **ta_strat,
+        )
+        filtered_fallback = {k: v for k, v in fallback_raw.items() if not ta_fields or k in ta_fields}
+        training_args = TrainingArguments(**filtered_fallback)
 
     # 9. Initialize SFTTrainer with EarlyStoppingCallback
     sft_params = inspect.signature(SFTTrainer.__init__).parameters
@@ -478,6 +616,7 @@ def train(args: argparse.Namespace) -> None:
         "args": training_args,
         "train_dataset": dataset["train"],
         "eval_dataset": dataset["validation"],
+        "data_collator": collator,
         "callbacks": [
             EarlyStoppingCallback(
                 early_stopping_patience=args.early_stopping_patience,
@@ -494,10 +633,6 @@ def train(args: argparse.Namespace) -> None:
     # max_seq_length is passed to SFTTrainer in older TRL; in newer TRL it is inside SFTConfig
     if "max_seq_length" in sft_params:
         trainer_kwargs["max_seq_length"] = args.max_seq_length
-
-    # If assistant_only_loss is not handled by SFTConfig, supply completion collator
-    if not getattr(training_args, "assistant_only_loss", False):
-        trainer_kwargs["data_collator"] = collator
 
     trainer = SFTTrainer(**trainer_kwargs)
 

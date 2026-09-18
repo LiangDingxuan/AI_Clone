@@ -434,16 +434,28 @@ llm\training\run_training.bat
 
 #### Google Colab:
 ```python
-!git clone https://github.com/LiangDingxuan/AI_Clone.git
-%cd AI_Clone
+# 1. Reset directory and clone/pull repository (prevents nested folders)
+%cd /content
+import os
+if not os.path.exists("/content/AI_Clone"):
+    !git clone https://github.com/LiangDingxuan/AI_Clone.git
+%cd /content/AI_Clone
+!git pull origin main
+
+# 2. Install dependencies & run QLoRA training
 !pip install -r llm/training/requirements.txt
 !python llm/training/train_lora.py --abliterated --style-boost --epochs 3 --merge-adapter
+
+# 3. Zip and download the trained adapter
+!zip -r dingxuan_adapter.zip checkpoints/dingxuan_lora/adapter
+from google.colab import files
+files.download("dingxuan_adapter.zip")
 ```
 
 ### 4. Advanced Hyperparameters & Safeguards
 
 - **Heretic Model Abliteration (`--abliterated`)**:
-  - Automatically targets **`huihui-ai/Qwen2.5-7B-Instruct-abliterated`** (abliterated using **Heretic** via Bayesian directional ablation).
+  - Automatically targets **`huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2`** (abliterated using **Heretic** via Bayesian directional ablation). Supports private/gated models via `--hf-token` or `HF_TOKEN` environment variable.
   - Removes corporate refusal directions (*"As an AI language model..."*) caused by corporate RLHF safety alignment, preventing the clone from breaking character during banter or colloquial discussions.
   - Legitimate privacy defenses (IC numbers, home address, passwords) remain strictly protected and are handled in-character by `RefusalDeflectionLayer` in `chat_app.py` (*"whut why u asking that lol"*).
 - **LoRA Scaling Factor ($\alpha$) Calibration**:
@@ -451,6 +463,7 @@ llm\training\run_training.bat
 - **Doppelganger Drift Safeguards**:
   - **Completion-Only Validation Loss**: Loss is computed strictly on assistant turns for both train and validation splits (user questions are never penalized).
   - **Early Stopping**: Halts training if validation loss does not improve for 2 evaluations (`--early-stopping-patience 2`), restoring the best checkpoint to prevent style overfitting.
+  - **Transformers & TRL Cross-Version Compatibility**: Dynamically inspects config fields to support both `transformers` v4 and v5+ (automatically mapping `warmup_steps`/`warmup_ratio` and `eval_strategy`).
 - **Third-Party Distractor Protection**:
   - In group chats, other users are formatted as `[Sender Name]: text`.
   - The system prompt includes an explicit **Multi-Party Context Directive** instructing the model to treat bracketed names as room background context, not statements made by the direct prompter.

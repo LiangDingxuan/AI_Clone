@@ -16,7 +16,7 @@ This directory contains the complete training package for fine-tuning open-sourc
 
 2. **Run training in one command**:
    ```bash
-   bash training/run_training.sh
+   bash llm/training/run_training.sh
    ```
 
 ---
@@ -31,7 +31,7 @@ This directory contains the complete training package for fine-tuning open-sourc
 
 2. **Double-click or run**:
    ```cmd
-   training\run_training.bat
+   llm\training\run_training.bat
    ```
 
 ---
@@ -42,15 +42,19 @@ This directory contains the complete training package for fine-tuning open-sourc
 2. Run the following cell:
 
 ```python
-# 1. Clone repository
-!git clone https://github.com/LiangDingxuan/AI_Clone.git
-%cd AI_Clone
+# 1. Reset directory and clone/pull repository (prevents nested folders)
+%cd /content
+import os
+if not os.path.exists("/content/AI_Clone"):
+    !git clone https://github.com/LiangDingxuan/AI_Clone.git
+%cd /content/AI_Clone
+!git pull origin main
 
 # 2. Install dependencies
-!pip install -r training/requirements.txt
+!pip install -r llm/training/requirements.txt
 
 # 3. Run QLoRA training on abliterated base
-!python training/train_lora.py --abliterated --style-boost --epochs 3 --merge-adapter
+!python llm/training/train_lora.py --abliterated --style-boost --epochs 3 --merge-adapter
 
 # 4. Zip and download the checkpoint
 !zip -r dingxuan_adapter.zip checkpoints/dingxuan_lora/adapter
@@ -64,7 +68,7 @@ files.download("dingxuan_adapter.zip")
 
 ### 1. Heretic Model Abliteration (`--abliterated`)
 Instruction models (`Qwen-2.5-7B-Instruct`) contain internal "refusal direction" vectors installed via corporate RLHF safety training. When discussing casual banter, gaming slang, or edgy topics with friends, base models can misfire and generate corporate refusal boilerplate (*"As an AI language model..."*), breaking character.
-- Passing `--abliterated` automatically uses **`huihui-ai/Qwen2.5-7B-Instruct-abliterated`** (abliterated using **Heretic** via Bayesian directional ablation).
+- Passing `--abliterated` automatically uses **`huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2`** (abliterated using **Heretic** via Bayesian directional ablation). Supports private/gated repositories via `--hf-token <token>` or `HF_TOKEN` environment variable.
 - This completely removes corporate refusal tendencies from the weights without retraining.
 - Any necessary refusals (e.g. asking for personal credentials or historical memory probing) are handled cleanly by our in-character [`RefusalDeflectionLayer`](../chat_app.py) (*"whut why u asking that lol"*).
 
@@ -77,8 +81,9 @@ By default, the training runner enables `--style-boost`, which configures:
 Because persona cloning is style-heavy rather than knowledge-heavy, this ratio ensures Dingxuan's signature Singlish fillers (`ah`, `sia`, `cuz`, `idk`, `yea`, `wait`) and punchy brevity are captured effectively without sounding like a generic corporate assistant.
 
 ### 3. "Doppelganger Drift" Safeguards (Style Overfitting Protection)
-- **Validation Completion Loss**: The validation set loss is computed **strictly on assistant tokens** using HuggingFace `trl`'s `DataCollatorForCompletionOnlyLM`. Loss is never computed on user/system prompts.
+- **Validation Completion Loss**: The validation set loss is computed **strictly on assistant tokens** using our `CustomDataCollatorForCompletionOnlyLM` (with direct token-id matching and `<|im_end|>` preservation). Loss is never computed on user/system prompts, protecting against Doppelganger Drift without requiring fragile chat template patching.
 - **Early Stopping**: The trainer evaluates validation loss every 40 steps. If the validation loss fails to improve for 2 consecutive checks while training loss plummets, training halts automatically and restores the best checkpoint (`load_best_model_at_end=True`).
+- **Transformers v4 & v5+ Dynamic Compatibility**: `train_lora.py` automatically detects and adapts configuration parameters (`warmup_steps` float ratio vs `warmup_ratio`, `eval_strategy` vs `evaluation_strategy`), ensuring seamless compatibility across different cloud runtime environments without manual parameter tuning.
 
 ### 4. Multi-Party Context Directive
 In group and supergroup chats, dialogue from third-party peers is formatted as `[Sender Name]: text`. The training samples incorporate an explicit system directive instructing Qwen to treat bracketed names as room background, preventing the model from confusing its identity with other participants.

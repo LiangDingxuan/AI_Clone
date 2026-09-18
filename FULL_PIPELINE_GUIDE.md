@@ -163,18 +163,27 @@ python llm/training/train_lora.py \
     --early-stopping-patience 2 \
     --merge-adapter
 ```
-*(Note: `--abliterated` defaults to `huihui-ai/Qwen2.5-7B-Instruct-abliterated`, abliterated via Heretic to remove corporate RLHF refusal vectors. Pass `--model-name <repo>` to use an alternative base model).*
+*(Note: `--abliterated` defaults to `huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2`, abliterated via Heretic to remove corporate RLHF refusal vectors. Pass `--model-name <repo>` to use an alternative base model).*
 
 ### 5. On Google Colab (Free T4 or Pro A100)
 1. Open [Google Colab](https://colab.research.google.com/) and set runtime to **T4 GPU** (`Runtime` -> `Change runtime type` -> `T4 GPU`).
 2. Run in a code cell:
 ```python
-!git clone https://github.com/LiangDingxuan/AI_Clone.git
-%cd AI_Clone
+# 1. Reset working directory and clone/pull repository (prevents nested folders)
+%cd /content
+import os
+if not os.path.exists("/content/AI_Clone"):
+    !git clone https://github.com/LiangDingxuan/AI_Clone.git
+%cd /content/AI_Clone
+!git pull origin main
+
+# 2. Install dependencies
 !pip install -r llm/training/requirements.txt
+
+# 3. Run QLoRA training on abliterated base
 !python llm/training/train_lora.py --abliterated --style-boost --epochs 3 --merge-adapter
 
-# Download your trained adapter
+# 4. Download your trained adapter
 !zip -r dingxuan_adapter.zip checkpoints/dingxuan_lora/adapter
 from google.colab import files
 files.download("dingxuan_adapter.zip")
@@ -343,7 +352,7 @@ llm\training\run_training.bat
 ```
 
 - **Key Safeguards & Abliteration**:
-  - `--abliterated`: Uses **`huihui-ai/Qwen2.5-7B-Instruct-abliterated`** (abliterated using **Heretic** via Bayesian directional ablation). Instruction-tuned base models embed corporate refusal vectors ("*As an AI language model...*") from corporate RLHF safety training. Abliteration removes these refusal directions directly from the base weights at zero extra compute or VRAM cost, preventing the clone from breaking character during banter or edgy discussions.
+  - `--abliterated`: Uses **`huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2`** (abliterated using **Heretic** via Bayesian directional ablation). Instruction-tuned base models embed corporate refusal vectors ("*As an AI language model...*") from corporate RLHF safety training. Abliteration removes these refusal directions directly from the base weights at zero extra compute or VRAM cost, preventing the clone from breaking character during banter or edgy discussions.
   - **In-Character Privacy Preservation**: Crucially, privacy protections (IC number, home address, passwords) are NOT lost—they are handled in-character by our Singlish `RefusalDeflectionLayer` in `llm/chat_app.py` (*"whut why u asking that lol"*), ensuring your clone deflects invasive questions naturally without reverting to corporate AI apologies.
   - `--style-boost`: Calibrates LoRA $r=16, \alpha=64$ ($\alpha/r = 4.0$) and learning rate $1.5\times 10^{-4}$ to amplify Singlish colloquialisms (`ah`, `sia`, `cuz`, `idk`, `yea`) and brevity.
   - **Completion-Only Loss**: Loss is calculated strictly on assistant turns for both train and validation sets.
@@ -429,7 +438,7 @@ python data_cleaning\index.py; python run_all.py --dry-run-llm; python llm\profi
 | **`llm/profiler.py`** | Metrics, Big-5, & prompt profiler | `None` (outputs `llm/profiles_summary.json`) | — |
 | **`llm/synthesizer.py`** | Generates system prompts | `--context [dm\|group\|supergroup]` | `dm` |
 | **`llm/export_training_data.py`** | Compiles SFT ChatML JSONL | `--output-dir`<br>`--val-ratio`<br>`--seed` | `llm/data`<br>`0.15`<br>`42` |
-| **`llm/training/train_lora.py`** | QLoRA GPU fine-tuning | `--model-name`<br>`--abliterated`<br>`--style-boost`<br>`--lora-r`<br>`--lora-alpha`<br>`--early-stopping-patience`<br>`--merge-adapter`<br>`--dry-run` | `Qwen/Qwen2.5-7B-Instruct` *(or `huihui-ai/Qwen2.5-7B-Instruct-abliterated` if `--abliterated`)*<br>`False`<br>`False`<br>`16`<br>`32`<br>`2`<br>`False`<br>`False` |
+| **`llm/training/train_lora.py`** | QLoRA GPU fine-tuning | `--model-name`<br>`--abliterated`<br>`--hf-token`<br>`--style-boost`<br>`--lora-r`<br>`--lora-alpha`<br>`--early-stopping-patience`<br>`--merge-adapter`<br>`--dry-run` | `Qwen/Qwen2.5-7B-Instruct` *(or `huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2` if `--abliterated`)*<br>`False`<br>`None`<br>`False`<br>`16`<br>`32`<br>`2`<br>`False`<br>`False` |
 | **`llm/chat_app.py`** | Interactive chat interface | `--provider [simulated\|hf\|openai\|anthropic]`<br>`--adapter <path>`<br>`--context [1\|2\|3]` | `simulated`<br>`None`<br>`personal_chat` |
 
 ---
@@ -464,4 +473,21 @@ python data_cleaning\index.py; python run_all.py --dry-run-llm; python llm\profi
 
 ### 6. Corporate Refusal Misfires ("As an AI language model..." or over-polite corporate tone)
 - **Cause**: Standard instruction-tuned models have corporate RLHF refusal vectors that trigger on casual banter, slang, or sensitive keywords.
-- **Fix**: Use `--abliterated` (enabled by default in `llm/training/run_training.sh` and `llm/training/run_training.bat`). This swaps the base model to `huihui-ai/Qwen2.5-7B-Instruct-abliterated` (abliterated using Heretic via Bayesian directional ablation). Corporate refusal boilerplate is eliminated, while legitimate privacy guardrails (IC numbers, passwords) are handled seamlessly by `RefusalDeflectionLayer` in Singlish.
+- **Fix**: Use `--abliterated` (enabled by default in `llm/training/run_training.sh` and `llm/training/run_training.bat`). This swaps the base model to `huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2` (abliterated using Heretic via Bayesian directional ablation). Corporate refusal boilerplate is eliminated, while legitimate privacy guardrails (IC numbers, passwords) are handled seamlessly by `RefusalDeflectionLayer` in Singlish.
+
+### 7. Hugging Face 401 Unauthorized / Gated or Deprecated Repositories
+- **Cause**: The community repository `huihui-ai/Qwen2.5-7B-Instruct-abliterated` (v1) was made private or removed by its author, returning `401 Unauthorized` / `RepositoryNotFoundError`.
+- **Fix**: `--abliterated` now targets `huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2` by default. If using private models or gated repositories, pass `--hf-token <token>` or set `export HF_TOKEN="<token>"`. You can also switch to the standard base model using `--model-name Qwen/Qwen2.5-7B-Instruct`.
+
+### 8. Google Colab Nested Directories & `zip error: Nothing to do!`
+- **Cause**: Re-running `%cd AI_Clone` repeatedly without navigating to `/content` creates nested folders like `/content/AI_Clone/AI_Clone/`. If training crashes before producing weights, `checkpoints/dingxuan_lora/adapter` does not exist, causing `zip error: Nothing to do!` followed by `FileNotFoundError: Cannot find file: dingxuan_adapter.zip`.
+- **Fix**: Use `%cd /content/AI_Clone` (or `%cd /content` before cloning). Always verify that `train_lora.py` finishes with `[SUCCESS]` before triggering the zip and download cell.
+
+### 9. `TypeError: SFTConfig.__init__() got an unexpected keyword argument 'warmup_ratio'`
+- **Cause**: In newer versions of Hugging Face `transformers` (v5+) and `trl` (v1.0+), `warmup_ratio` was deprecated and merged into `warmup_steps` (which now accepts floats in `[0, 1)` representing the ratio). Passing `warmup_ratio` directly into `SFTConfig` triggers a `TypeError`.
+- **Fix**: `llm/training/train_lora.py` dynamically inspects dataclass fields across `transformers` and `trl` versions, automatically selecting `warmup_steps` or `warmup_ratio`, `eval_strategy` or `evaluation_strategy`, and falling back cleanly to standard `TrainingArguments`.
+
+### 10. `ValueError: The chat template is not training-compatible (missing prefix-preservation or {% generation %} markers)`
+- **Cause**: In modern `trl` (v1.0+), setting `assistant_only_loss=True` in `SFTConfig` triggers `get_training_chat_template()`, which attempts to parse or patch the tokenizer's chat template with generation markers. Because Qwen2.5's ChatML template does not contain `{% generation %}` markers and TRL lacks an internal patch for Qwen2.5, it throws a `ValueError`.
+- **Fix**: `llm/training/train_lora.py` enforces completion-only loss masking directly via `CustomDataCollatorForCompletionOnlyLM(response_template="<|im_start|>assistant\n")` passed as `data_collator` to `SFTTrainer`. This completely avoids TRL's experimental chat template parser while mathematically guaranteeing that loss is only calculated on assistant completion tokens and `<|im_end|>` termination tokens (preserving the Doppelganger Drift safeguard).
+

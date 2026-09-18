@@ -209,9 +209,66 @@ class TestTrainingScriptSafeguards(unittest.TestCase):
         with patch.object(sys, "argv", ["train_lora.py", "--abliterated"]):
             args = parse_args()
             self.assertTrue(args.abliterated)
-            self.assertEqual(args.model_name, "huihui-ai/Qwen2.5-7B-Instruct-abliterated")
+            self.assertEqual(args.model_name, "huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2")
             tmpl = detect_response_template(args.model_name)
             self.assertEqual(tmpl, "<|im_start|>assistant\n")
+
+    def test_custom_completion_collator_masking(self):
+        """Test completion-only masking on assistant tokens and preservation of eos token."""
+        try:
+            from llm.training.train_lora import CustomDataCollatorForCompletionOnlyLM
+        except ImportError:
+            from training.train_lora import CustomDataCollatorForCompletionOnlyLM
+
+        if CustomDataCollatorForCompletionOnlyLM is None:
+            self.skipTest("torch/transformers not available in test environment")
+
+        class MockTokenizer:
+            pad_token_id = 0
+            eos_token_id = 151645
+            padding_side = "right"
+
+            def encode(self, text, add_special_tokens=False):
+                if text == "<|im_start|>assistant\n":
+                    return [10, 20]
+                if text == "<|im_end|>":
+                    return [151645]
+                return [1]
+
+            def pad(self, encoded_inputs, **kwargs):
+                import torch
+                max_len = max(len(x["input_ids"]) for x in encoded_inputs)
+                input_ids = []
+                for x in encoded_inputs:
+                    seq = list(x["input_ids"])
+                    seq += [self.pad_token_id] * (max_len - len(seq))
+                    input_ids.append(seq)
+                return {"input_ids": torch.tensor(input_ids)}
+
+        mock_tok = MockTokenizer()
+        collator = CustomDataCollatorForCompletionOnlyLM(
+            response_template="<|im_start|>assistant\n",
+            tokenizer=mock_tok,
+        )
+
+        ex = {
+            "messages": [{"role": "user", "content": "hi"}],  # Extra non-tensor field
+            "input_ids": [100, 101, 10, 20, 30, 40, 151645, 50],
+        }
+        batch = collator([ex])
+        labels = batch["labels"][0].tolist()
+
+        # User and template tokens should be -100
+        self.assertEqual(labels[0], -100)
+        self.assertEqual(labels[1], -100)
+        self.assertEqual(labels[2], -100)
+        self.assertEqual(labels[3], -100)
+        # Assistant content and EOS should NOT be -100
+        self.assertEqual(labels[4], 30)
+        self.assertEqual(labels[5], 40)
+        self.assertEqual(labels[6], 151645)
+        # Post-EOS should be -100
+        self.assertEqual(labels[7], -100)
 
 
 class TestChatAppAdapterIntegration(unittest.TestCase):
