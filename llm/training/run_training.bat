@@ -16,7 +16,7 @@ if %errorlevel% equ 0 (
 
 echo.
 echo === [2/3] Installing Dependencies ===
-pip install -r "%SCRIPT_DIR%requirements.txt"
+pip install -r "%SCRIPT_DIR%requirements.txt" --extra-index-url https://download.pytorch.org/whl/cu126
 
 echo.
 echo === [3/3] Starting QLoRA Fine-Tuning ===
@@ -36,7 +36,7 @@ python "%SCRIPT_DIR%train_lora.py" ^
 if %errorlevel% neq 0 (
     echo.
     echo ======================================================================
-    echo [ERROR] Training encountered an error (exit code %errorlevel%).
+    echo [ERROR] Training encountered an error [exit code %errorlevel%].
     echo Check the error traceback above.
     echo ======================================================================
     pause
